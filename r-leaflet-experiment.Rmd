@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# install.packages("leaflet")
+library(geojsonsf)
+# library(rgdal)
+library(sf)
+library(tidyverse)
+library(leaflet)
+```
+Load geojson
+```{r}
+map1 <- geojson_sf("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/land.4326.stops.geojson")
+st_crs(map1)
+st_as_sf(map1)
+plot(map1)
+summary(map1)
+```
+
+
+```{r}
+my.gradient <- colorRamp(c("#a28cab", "#7bc0bc"))
+pal <- colorQuantile(
+  my.gradient,
+  domain = NULL,
+  # map1$n.sfl,
+  n = 10
+  # na.color = "#808080",
+  # alpha = FALSE,
+  # reverse = FALSE,
+  # right = FALSE
+)
+
+leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap.DE) %>%
+  addPolygons(data=map1, fillColor=~pal(n.sfl),
+              color = "white",
+              weight=2,
+              fillOpacity = 0.8
+              # highlightOptions = highlightOptions(color='white',weight=1,bringToFront = TRUE)
+              )
+
+```
+
+```{r}
+
+```
+

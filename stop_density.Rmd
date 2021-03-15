@@ -1,0 +1,174 @@
+---
+title: "Mapping German stop density"
+output: 
+  html_document:
+    code_folding: hide
+---
+```{r, setup}
+knitr::opts_chunk$set(message = FALSE, warning = F)
+```
+
+```{r}
+library(tidyverse)
+library(plotly)
+
+source("C://Users/maita.schade/Documents/Work/agora_colors.R")
+```
+
+```{r}
+scope <- "fv"
+
+loadGtfsStations <- function(scope){
+  stops <- read_csv(paste0("../raw/", scope, "/stops.txt"))
+  stop.times <- read_csv(paste0("../raw/", scope,"/stop_times.txt"))
+  # trips <- read_csv(paste0("../raw/", scope,"/trips.txt"))
+  # routes <- read_csv(paste0("../raw/", scope,"/routes.txt"))
+  # calendar <- read_csv(paste0("../raw/", scope,"/calendar.txt"))
+    
+  
+  print("STOPS")
+  print(names(stops))
+  print("STOP.TIMES")
+  print(names(stop.times))
+  # print("TRIPS")
+  # names(trips)
+  # print("ROUTES")
+  # names(routes)
+  # print("CALENDAR")
+  # names(calendar)
+  
+  
+  stop.spacetimes <- right_join(stops, stop.times, by = c("stop_id"))
+  
+  return(stop.spacetimes)
+}
+
+```
+
+I would like the number of stops (per day) per area.
+Stations, with their coordinates, are in "stops".
+Each stop's time is in "stop.times"--I should be able to sum these up for each stop.
+(We may later want to look at these by different modes, I believe found in "routes", linked through "trips" with the "stop.times")
+
+stop times have a trip. each trip has a service_id, which tells you when it comes through.
+```{r}
+# trips.service <- full_join(trips,calendar, by="service_id")
+```
+
+Turns out each "service" applies to multiple "trips", but each trip only belongs in one "service. Identify which services are weekday/weekend, then flag the trips with that.
+That means: if we add up all the trips, we get the count for one week.
+
+
+First, get base map   
+```{r}
+# install.packages("ggmap")
+library(ggmap)
+# # install.packages("sf")
+library(sf)
+library(devtools)
+# install_github('Chrisjb/basemapR', force=T)
+library(basemapR)
+my.bbox <- st_bbox(c(xmin=5, ymin=46, xmax=15, ymax=56))
+
+# de_basemap <- base_map(my.bbox, basemap = "positron")
+de_basemap <- get_stamenmap(bbox=c(left=5, bottom=46, right=15, top=56), zoom=7, maptype = 'toner-background')
+berlin_basemap <- get_stamenmap(bbox=c(left=13.25, bottom=52.3, right=13.5, top=52.7), zoom=11, maptype = 'toner-background')
+# myLocation<-c(lon= -95.3632715, lat = 29.7632836)
+# myMap<-get_map(location=myLocation, source="stamen", maptype="watercolor", crop=FALSE)
+plot(de_basemap)
+```
+Make the joint frame to plot
+
+```{r}
+stop.spacetimes <- loadGtfsStations("fv")
+# write_csv(stop.spacetimes, "../out/stations_fv.csv")
+stop.spacetimes.geom <- st_as_sf(x=stop.spacetimes,
+                                 coords = c("stop_lon", "stop_lat"),
+                                 crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+```
+
+
+```{r, fig.width=8,fig.height=8}
+ggmap(berlin_basemap)+
+  # geom_density_2d(data=stop.spacetimes, aes(x=stop_lon, y=stop_lat, fill = ..level..), alpha = 0.5, geom="polygon", inherit.aes = F) +
+  # stat_density_2d(data=stop.spacetimes, aes(x=stop_lon, y=stop_lat, fill = ..count..), alpha = 0.5, h=NULL, geom="raster",contour = F, inherit.aes = F) +
+  geom_bin2d(data=stop.spacetimes, aes(x=stop_lon, y=stop_lat, fill = ..count..), alpha = 0.7, bins=50, inherit.aes = F) +
+  # coord_equal() +
+  coord_cartesian(xlim = c(13.25, 13.5),
+                  ylim = c(52.3, 52.7)) +
+  scale_fill_gradientn(colors = agora.cols.3, trans="log") +
+  xlab("Längengrad") +
+  ylab("Breitengrad") +
+  labs(fill = "Abfahrten pro Woche") ->
+p
+# install.packages("plotly")
+ggplotly(p)
+# ggplot() + 
+#   de_basemap +
+#   geom_sf(data=stop.spacetimes.geom)
+```
+
+```{r}
+if(nrow(stop.spacetimes < exp(6))){
+  ggmap(de_basemap)+
+    geom_point(data=stop.spacetimes, aes(x=stop_lon, y=stop_lat), size=0.1, alpha = 0.5, inherit.aes = F)+
+    xlab("Längengrad") +
+    ylab("Breitengrad") ->
+    p
+  ggplotly(p)
+}
+```
+Try to get all three and somehow add them up.
+First, load all three:
+
+```{r,fig.width=8,fig.height=8}
+scopes <- list("fv","rs","nv")
+
+stations.list <- lapply(scopes, loadGtfsStations)
+mapply(function(x,y){write_csv(x, paste0("../out/",y,".stops.csv"))}, stations.list, scopes)
+lapply(stations.list, function(df){write_csv(df)})
+
+stations.df <- reduce(
+                      lapply(stations.list, function(df){mutate(df, wt = 1/n())}), #weight by n of stops in category
+                      rbind) %>%
+  mutate(wt=wt/sum(wt)*n())
+unique(stations.df$wt)
+```
+Put them on the map:
+
+```{r,fig.width=8,fig.height=8}
+ggmap(de_basemap)+
+  stat_summary_2d(data=stations.df, aes(x=stop_lon, y=stop_lat, z=wt), fun = sum, alpha = 0.7, bins=c(60,70), inherit.aes = F) +
+  scale_fill_gradientn(colors = agora.cols.3, trans="log") +
+  xlab("Längengrad") +
+  ylab("Breitengrad") +
+  labs(fill = "Abfahrten pro Woche")
+
+```
+
+For comparison, Germany-wide maps of all three types:
+```{r, fig.width=8,fig.height=8}
+stationPlotHelper <- function(stop.spacetimes, basemap=berlin_basemap, xlim=c(13.25, 13.5), ylim=c(52.3, 52.7), bins=50){
+  ggmap(basemap)+
+  geom_hex(data=stop.spacetimes, aes(x=stop_lon, y=stop_lat, fill = ..count..), alpha = 0.7, bins=bins, inherit.aes = F) +
+  # stat_summary_2d(data=stations.df, aes(x=stop_lon, y=stop_lat, z=1), fun = sum, alpha = 0.7, bins=bins, inherit.aes = F)+
+  # coord_cartesian(xlim = xlim,
+  #                 ylim = ylim) +
+  scale_fill_gradientn(colors = agora.cols.3, trans="log") +
+  xlab("Längengrad") +
+  ylab("Breitengrad") +
+  labs(fill = "Abfahrten pro Woche") ->
+p
+  return(p)
+}
+
+stationPlotHelper(stations.list[[1]])
+
+lapply(stations.list, stationPlotHelper, basemap=de_basemap, xlim=c(5,15), ylim=c(46,56), bins=c(60,70))
+```
+
+```{r,fig.width=10,fig.height=10}
+p <- stationPlotHelper(stations.list[[3]], basemap=de_basemap, xlim=c(5,15), ylim=c(46,56),bins=c(120,150))
+p
+```
+

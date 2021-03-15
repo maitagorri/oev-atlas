@@ -1,0 +1,51 @@
+---
+title: "German GTFS"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+stops <- read_csv("../raw/fv/stops.txt")
+stop.times <- read_csv("../raw/fv/stop_times.txt")
+trips <- read_csv("../raw/fv/trips.txt")
+routes <- read_csv("../raw/fv/routes.txt")
+```
+```{r}
+stops %>%
+  filter(stop_name%like%"Südkreuz") ->
+  suedkreuz
+
+suedkreuz
+
+```
+```{r}
+stop.times %>%
+  filter(stop_id%in%suedkreuz$stop_id)
+```
+```{r}
+trips %>%
+  filter(route_id==1)
+```
+```{r}
+routes
+```
+```{r}
+stop.times %>%
+  left_join(stops, by="stop_id") %>%
+  group_by(stop_name) %>%
+  summarize(n=n()) %>%
+  arrange(desc(n)) %>%
+  slice_head(n=20) %>%
+  mutate(stop_name=factor(stop_name, levels=stop_name))->
+  top20
+
+top20 %>%
+  ggplot() +
+  geom_col(aes(x = stop_name, y=n)) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
