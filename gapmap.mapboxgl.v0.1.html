@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Display a map on a webpage</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<style>
+    #menu {
+    background: #fff;
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 10px;
+    border-radius: 3px;
+    width: 120px;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    font-family: 'Open Sans', sans-serif;
+    }
+     
+    #menu a {
+    font-size: 13px;
+    color: #404040;
+    display: block;
+    margin: 0;
+    padding: 0;
+    padding: 10px;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+    text-align: center;
+    }
+     
+    #menu a:last-child {
+    border: none;
+    }
+     
+    #menu a:hover {
+    background-color: #f8f8f8;
+    color: #404040;
+    }
+     
+    #menu a.active {
+    background-color: #3887be;
+    color: #ffffff;
+    }
+     
+    #menu a.active:hover {
+    background: #3074a4;
+    }
+</style>
+ 
+<nav id="menu"></nav>
+<div id="map"></div>
+
+<div id="map"></div>
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoibWFpdGFnb3JyaSIsImEiOiJja2tlMXB3bTUwZmM2MnhxdHA4cGY5aGsxIn0.fQNicHICHcgHhzZojsz87w';
+var map = new mapboxgl.Map({
+  container: 'map',
+  center: [10.371,50.937],
+  style: 'mapbox://styles/maitagorri/ckmafvyr016fo17n3gyqblzu2',
+  zoom: 6/*,
+  maxBounds: [
+    [12.4393, 52.0795],
+    [14.3262, 52.9155],
+  ],*/
+});
+
+map.on('mousemove', function(e) {
+// The event object (e) contains information like the
+// coordinates of the point on the map that was clicked.
+console.log('A move event has occurred at ' + e.lngLat);
+});
+
+//whatever layers you want to toggle go in to this function
+/*toggleLayer(['gemeinde','kreis','land'], 'Administrative Einheiten (Abfahrten pro Siedlungsfläche")');
+
+function toggleLayer(ids, name) {
+    var link = document.createElement('a');
+    link.href = '#';
+    link.className = 'active';
+    link.textContent = name;
+
+    link.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        for (layers in ids){
+            var visibility = map.getLayoutProperty(ids[layers], 'visibility');
+            if (visibility === 'visible') {
+                map.setLayoutProperty(ids[layers], 'visibility', 'none');
+                this.className = '';
+            } else {
+                this.className = 'active';
+                map.setLayoutProperty(ids[layers], 'visibility', 'visible');
+            }
+         }
+
+    };
+
+    var layers = document.getElementById('menu');
+    layers.appendChild(link);
+}
+*/
+
+
+// add feature interactivity
+/*map.on('mousemove', function (evt) {
+    console.log(evt.point)
+  //get all features close to the pointer
+  map.featuresAt(
+    evt.point,
+    {
+      radius: 15,
+      layer: ['land', 'kreis', 'gemeinde'], //we chose which layers should be 'hoverable'
+    },
+    (err, features) => {
+      //if features are hovered, display a tooltip with the data
+      if (features.length) {
+        tooltip.update(features[0].properties);
+        tooltip.updatePosition(evt.point);
+      } else {
+        //if no features were found, hide the tooltip
+        tooltip.hide();
+      }
+    }
+  ); 
+});*/
+
+
+/*
+// enumerate ids of the layers
+var toggleableLayerIds = ['gemeinde','kreis','land'];
+ 
+// set up the corresponding toggle button for each layer
+for (var i = 0; i < toggleableLayerIds.length; i++) {
+    var id = toggleableLayerIds[i];
+ 
+    var link = document.createElement('a');
+    link.href = '#';
+    link.className = 'active';
+    link.textContent = id;
+     
+    link.onclick = function (e) {
+        var clickedLayer = this.textContent;
+        e.preventDefault();
+        e.stopPropagation();
+         
+        var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+     
+    // toggle layer visibility by changing the layout object's visibility property
+        if (visibility === 'visible') {
+            map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+            this.className = '';
+        } else {
+                this.className = 'active';
+                map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+        }
+    };
+     
+    var layers = document.getElementById('menu');
+    layers.appendChild(link);
+}
+*/
+</script>
+
+</body>
+</html>
