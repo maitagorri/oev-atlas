@@ -63,7 +63,11 @@ background: #3074a4;
         container: 'map', // container id
         style: 'mapbox://styles/philippagora/ckmav8o5rhup017o46hkopbg0', // style URL
         center: [10.371,50.937], // starting position [lng, lat]
-        zoom: 6 // starting zoom
+        zoom: 6, // starting zoom
+        maxBounds: [
+            [4, 46],
+            [17, 56],
+        ]
     });
 
  /*   map.on('mousemove', function(evt) {
