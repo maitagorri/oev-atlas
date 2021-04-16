@@ -9,6 +9,8 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r}
 # install.packages("leaflet")
+install.packages("geojson")
+library(geojson)
 library(geojsonsf)
 # library(rgdal)
 library(sf)
@@ -17,7 +19,7 @@ library(leaflet)
 ```
 Load geojson
 ```{r}
-map1 <- geojson_sf("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/land.4326.stops.geojson")
+map1 <- ndgeo("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/lan.4326.stops.geojsonl.json")
 st_crs(map1)
 st_as_sf(map1)
 plot(map1)
