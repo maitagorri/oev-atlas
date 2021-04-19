@@ -28,67 +28,54 @@ sfl_tables= {"gem":geo_path + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
               "lan":geo_path + "Tabelle_Siedlungsflaeche_Land.csv"}
 
 for level in shapefiles.keys():
-    # what about the admin areas?
+    # Read in admin areas
     area_path = shapefiles[level]
     area_gdf = gpd.read_file(area_path)
-    
-    #area_gdf.head()
-    #area_gdf.crs
+    # fix projection
     area_gdf = area_gdf.to_crs("epsg:3857")
-    #area_gdf.columns
-    area_gdf.reset_index(inplace=True) # index to identify individual shapes
     area_gdf.AGS = area_gdf.AGS.astype(int) # to compare to other sources, get reasonable type for AGS
-    
+  
     # get counts of stops in all shapes associated with each AGS
-    scopecounts = {}
+    agg_counts_df = area_gdf[["AGS"]].drop_duplicates()
     for scope in pointfiles.keys():
         print("Counting "+scope+" in "+level)
-        # get counts per station, with point locations
+        # read counts per station, with point locations
         ncounts_df = pd.read_csv(pointfiles[scope])
-        #ncounts_df.head()
         ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
                                        geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
                                        crs="epsg:4326").to_crs("epsg:3857")
         ## get sum of stuff in each AGS
-        agg_counts_df = gpd.sjoin(area_gdf, ncounts_gdf, how="left", op="contains" # spatial join
-                            )[["AGS","n"]                                    # select only relevant cols
-                            ].groupby("AGS").sum().rename({"n":"n."+scope},axis=1)
-        # make a dictionary of scope counts
-        scopecounts[scope] = agg_counts_df
+        agg_counts_df = gpd.sjoin(area_gdf[["AGS","geometry"]], ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
+                            )[["AGS","n"]
+                            ].groupby("AGS").sum().rename({"n":"n."+scope},axis=1
+                            ).merge(agg_counts_df, how="right", on="AGS") # keep AGS that have counts in them
 
- 
+    # Aggregate other metrics by AGS
+    agg_areas_df = area_gdf[["AGS","KFL","EWZ"]       # select only relevant cols
+                        ].groupby("AGS").sum() 
+    
     # select correct shapes, and dissolve them by AGS/GEN
     exists_gdf = area_gdf[(area_gdf.KFL>0)][["AGS","GEN","geometry"]].dissolve(by="AGS")
     
-    agg_areas_df = area_gdf[["AGS","KFL","EWZ"]       # select only relevant cols
-                        ].groupby("AGS").sum() 
-        # what I actually need: individual AGS, GEN, sum EWZ, KFL, n, selected geometry 
 
-    ## join together valid shapes and stop counts
-    agg_gdf = exists_gdf
-    for scope in scopecounts.keys():
-        agg_gdf = agg_gdf.merge(scopecounts[scope], how="outer", on="AGS")
-    
+    # join together valid shapes, aggregate numbers, and stop counts
+    agg_gdf = exists_gdf.merge(agg_counts_df, on='AGS'
+                        ).merge(agg_areas_df, on='AGS')
     # Merge SFL onto shape
-    # reading in the corresponding Siedlungsflaeche
+        # reading in the corresponding Siedlungsflaeche
     area_sfl_path = sfl_tables[level]
     area_sfl_df = pd.read_csv(area_sfl_path, skiprows = [1], sep = ";", decimal = ",")
-
-        ## checking what field makes most sense to use for merge
-    #[s for s in area_gdf.AGS_0.astype('int64') if s in area_sfl_df.Kennziffer]
     
-    #sum(area_sfl_df.Kennziffer.isin(area_gdf.AGS_0.astype(int)))
-    #sum(area_sfl_df.Kennziffer.isin(area_gdf.AGS.astype(int)))
+    # Add in Siednlungsflächenanteil
+    agg_sfl_gdf = agg_gdf.merge(area_sfl_df[["Kennziffer",'Anteil Siedlungs- und Verkehrsfläche']], how="left", left_on = "AGS", right_on = "Kennziffer")
     
-    #area_sfl_df[~area_sfl_df.Kennziffer.isin(area_gdf.AGS_0.astype(int))][["Raumeinheit","Kennziffer"]]
-    #area_gdf[~area_gdf.AGS_0.astype(int).isin(area_sfl_df.Kennziffer)][["GEN","AGS_0"]]
-        ## es scheint als ob einige Kennziffern sich nicht 100% decken
+    # calculate proper SFL
+    agg_sfl_gdf['SFL'] = agg_sfl_gdf['KFL'] * agg_sfl_gdf['Anteil Siedlungs- und Verkehrsfläche']
     
-    agg_sfl_gdf = agg_gdf.merge(area_sfl_df, how="left", left_on = "AGS", right_on = "Kennziffer")
-
-    # clean_df.to_file(out_path + level +"."+scope+".stops.3857.geojson",driver="GeoJSON")
-    agg_sfl_gdf.to_file(out_path + level +".stops.3857.geojson",driver="GeoJSON")
-    print("Wrote " + level +"."+scope+".stops.3857.geojson")
+    # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
+    agg_sfl_gdf[['AGS', 'Raumeinheit', 'KFL', 'EWZ', 'SFL', 'n.all', 'n.fv', 'geometry']
+    ].to_file(out_path + level +".stops.3857.geojson",driver="GeoJSON")
+    print("Wrote " + level +".stops.3857.geojson")
 
 
 # load the grid layers
