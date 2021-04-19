@@ -12,8 +12,8 @@ import geopandas as gpd
 
 # define the points layers
 out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
-pointfiles = {"fv":out_path + "fv.nstops.csv",
-          "all":out_path + "nstops.csv"}
+pointfiles = {"all":out_path + "nstops.csv",
+              "fv":out_path + "fv.nstops.csv"}
 
 # define the area layers
 geo_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
@@ -27,59 +27,68 @@ sfl_tables= {"gem":geo_path + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
               "kre":geo_path + "Tabelle_Siedlungsflaeche_Kreis.csv",
               "lan":geo_path + "Tabelle_Siedlungsflaeche_Land.csv"}
 
-for scope in pointfiles.keys():
-    for level in shapefiles.keys():
-        # what about the admin areas?
-        gem_path = shapefiles[level]
-        gem_gdf = gpd.read_file(gem_path)
-        
-        #gem_gdf.head()
-        #gem_gdf.crs
-        gem_gdf = gem_gdf.to_crs("epsg:3857")
-        #gem_gdf.columns
-        gem_gdf.reset_index(inplace=True) #index to identify individual shapes
-        
-        # reading in also the corresponding Siedlungsflaeche
-        gem_sfl_path = sfl_tables[level]
-        gem_sfl_df = pd.read_csv(gem_sfl_path, skiprows = [1], sep = ";", decimal = ",")
-        #gem_sfl_df.head()
-        
-        # try how projections of the points fit into this
+for level in shapefiles.keys():
+    # what about the admin areas?
+    area_path = shapefiles[level]
+    area_gdf = gpd.read_file(area_path)
+    
+    #area_gdf.head()
+    #area_gdf.crs
+    area_gdf = area_gdf.to_crs("epsg:3857")
+    #area_gdf.columns
+    area_gdf.reset_index(inplace=True) # index to identify individual shapes
+    area_gdf.AGS = area_gdf.AGS.astype(int) # to compare to other sources, get reasonable type for AGS
+    
+    # get counts of stops in all shapes associated with each AGS
+    scopecounts = {}
+    for scope in pointfiles.keys():
+        print("Counting "+scope+" in "+level)
+        # get counts per station, with point locations
         ncounts_df = pd.read_csv(pointfiles[scope])
         #ncounts_df.head()
         ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
                                        geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
                                        crs="epsg:4326").to_crs("epsg:3857")
-        
-        # Merge SFL onto shape
-            ## checking what field makes most sense to use for merge
-        #[s for s in gem_gdf.AGS_0.astype('int64') if s in gem_sfl_df.Kennziffer]
-        
-        #sum(gem_sfl_df.Kennziffer.isin(gem_gdf.AGS_0.astype(int)))
-        #sum(gem_sfl_df.Kennziffer.isin(gem_gdf.AGS.astype(int)))
-        
-        #gem_sfl_df[~gem_sfl_df.Kennziffer.isin(gem_gdf.AGS_0.astype(int))][["Raumeinheit","Kennziffer"]]
-        #gem_gdf[~gem_gdf.AGS_0.astype(int).isin(gem_sfl_df.Kennziffer)][["GEN","AGS_0"]]
-            ## es scheint als ob einige Kennziffern sich nicht 100% decken
-        
-        gem_gdf.AGS = gem_gdf.AGS.astype(int)
-        gem_sfl_gdf = gem_gdf.merge(gem_sfl_df, how="left", left_on = "AGS", right_on = "Kennziffer")
-        # !!! actually do this at the very end
-        
-        
-        
-        # Merge shapes with pointcounts
-        sum_gdf = gpd.sjoin(gem_sfl_gdf, ncounts_gdf, how="left", op="contains" # spatial join
-                            )[["index", "n"]                                    # select only relevant cols
-                            ].groupby("index").sum()                            # groupby shapes and sum
-        agg_df = gem_sfl_gdf.merge(sum_gdf, how="left", on="index")            # join shapes & info back on
-        agg_df["SFL_frac"] = agg_df["Anteil Siedlungs- und Verkehrsfläche"]/100 # clean up SFL
-        
-        clean_df = agg_df[["AGS","GEN","EWZ", "KFL", "SFL_frac","n","geometry"]]
-            # select relevant cols
-        # clean_df.to_file(out_path + level +"."+scope+".stops.3857.geojson",driver="GeoJSON")
-        agg_df.to_file(out_path + level +"."+scope+".stops.3857.geojson",driver="GeoJSON")
+        ## get sum of stuff in each AGS
+        agg_counts_df = gpd.sjoin(area_gdf, ncounts_gdf, how="left", op="contains" # spatial join
+                            )[["AGS","n"]                                    # select only relevant cols
+                            ].groupby("AGS").sum().rename({"n":"n."+scope},axis=1)
+        # make a dictionary of scope counts
+        scopecounts[scope] = agg_counts_df
 
+ 
+    # select correct shapes, and dissolve them by AGS/GEN
+    exists_gdf = area_gdf[(area_gdf.KFL>0)][["AGS","GEN","geometry"]].dissolve(by="AGS")
+    
+    agg_areas_df = area_gdf[["AGS","KFL","EWZ"]       # select only relevant cols
+                        ].groupby("AGS").sum() 
+        # what I actually need: individual AGS, GEN, sum EWZ, KFL, n, selected geometry 
+
+    ## join together valid shapes and stop counts
+    agg_gdf = exists_gdf
+    for scope in scopecounts.keys():
+        agg_gdf = agg_gdf.merge(scopecounts[scope], how="outer", on="AGS")
+    
+    # Merge SFL onto shape
+    # reading in the corresponding Siedlungsflaeche
+    area_sfl_path = sfl_tables[level]
+    area_sfl_df = pd.read_csv(area_sfl_path, skiprows = [1], sep = ";", decimal = ",")
+
+        ## checking what field makes most sense to use for merge
+    #[s for s in area_gdf.AGS_0.astype('int64') if s in area_sfl_df.Kennziffer]
+    
+    #sum(area_sfl_df.Kennziffer.isin(area_gdf.AGS_0.astype(int)))
+    #sum(area_sfl_df.Kennziffer.isin(area_gdf.AGS.astype(int)))
+    
+    #area_sfl_df[~area_sfl_df.Kennziffer.isin(area_gdf.AGS_0.astype(int))][["Raumeinheit","Kennziffer"]]
+    #area_gdf[~area_gdf.AGS_0.astype(int).isin(area_sfl_df.Kennziffer)][["GEN","AGS_0"]]
+        ## es scheint als ob einige Kennziffern sich nicht 100% decken
+    
+    agg_sfl_gdf = agg_gdf.merge(area_sfl_df, how="left", left_on = "AGS", right_on = "Kennziffer")
+
+    # clean_df.to_file(out_path + level +"."+scope+".stops.3857.geojson",driver="GeoJSON")
+    agg_sfl_gdf.to_file(out_path + level +".stops.3857.geojson",driver="GeoJSON")
+    print("Wrote " + level +"."+scope+".stops.3857.geojson")
 
 
 # load the grid layers
