@@ -4,6 +4,10 @@
 Created on Thu Mar  4 20:51:56 2021
 
 @author: maita
+
+Once counts are aggregated by station, and saved in tables, this code lets you
+combine this information with information about administrative areas and their 
+geographies.
 """
 
 
@@ -67,13 +71,16 @@ for level in shapefiles.keys():
     area_sfl_df = pd.read_csv(area_sfl_path, skiprows = [1], sep = ";", decimal = ",")
     
     # Add in Siednlungsflächenanteil
-    agg_sfl_gdf = agg_gdf.merge(area_sfl_df[["Kennziffer",'Anteil Siedlungs- und Verkehrsfläche']], how="left", left_on = "AGS", right_on = "Kennziffer")
+    agg_sfl_gdf = agg_gdf.merge(area_sfl_df[["Kennziffer",'Raumeinheit','Anteil Siedlungs- und Verkehrsfläche']], how="left", left_on = "AGS", right_on = "Kennziffer")
     
-    # calculate proper SFL
-    agg_sfl_gdf['SFL'] = agg_sfl_gdf['KFL'] * agg_sfl_gdf['Anteil Siedlungs- und Verkehrsfläche']
-    
+    # calculate proper SFL, other numbers
+    agg_sfl_gdf['SFL'] = agg_sfl_gdf['KFL'] * agg_sfl_gdf['Anteil Siedlungs- und Verkehrsfläche']/100
+    for scope in pointfiles.keys():
+        agg_sfl_gdf['n.'+scope+'.ewz'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['EWZ']
+        agg_sfl_gdf['n.'+scope+'.kfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['KFL']
+        agg_sfl_gdf['n.'+scope+'.sfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['SFL']
     # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
-    agg_sfl_gdf[['AGS', 'Raumeinheit', 'KFL', 'EWZ', 'SFL', 'n.all', 'n.fv', 'geometry']
+    agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']
     ].to_file(out_path + level +".stops.3857.geojson",driver="GeoJSON")
     print("Wrote " + level +".stops.3857.geojson")
 

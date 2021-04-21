@@ -11,7 +11,7 @@ import os, re
 
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
-rawdatadir = rawdir + "GTFS/2021/"
+rawdatadir = rawdir + "gtfs/2021/"
 outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
 
 
