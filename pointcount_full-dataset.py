@@ -85,6 +85,71 @@ for level in shapefiles.keys():
     print("Wrote " + level +".stops.3857.geojson")
 
 
+
+###############
+    # grid
+###############
+    
+# make a grid -- one for each sidelength, in good projection
+from shapely.geometry import Polygon
+import numpy as np
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
+germany = world[world.name == "Germany"]
+xmin,ymin,xmax,ymax =  germany.total_bounds
+
+sls = [50000, 100000] #m
+grids = {}
+for sl in sls:
+    rows = int(np.ceil((ymax-ymin) /  sl))
+    cols = int(np.ceil((xmax-xmin) / sl))
+    XleftOrigin = xmin
+    XrightOrigin = xmin + sl
+    YtopOrigin = ymax
+    YbottomOrigin = ymax- sl
+    polygons = []
+    for i in range(cols):
+        Ytop = YtopOrigin
+        Ybottom =YbottomOrigin
+        for j in range(rows):
+            polygons.append(Polygon([(XleftOrigin, Ytop), (XrightOrigin, Ytop), (XrightOrigin, Ybottom), (XleftOrigin, Ybottom)])) 
+            Ytop = Ytop - sl
+            Ybottom = Ybottom - sl
+        XleftOrigin = XleftOrigin + sl
+        XrightOrigin = XrightOrigin + sl
+    grid = gpd.GeoDataFrame({'geometry':polygons})
+    grid.crs = 'epsg:3035'
+    grids[sl] = grid
+    ax = grid.boundary.plot()
+    germany.boundary.plot(ax=ax)
+
+# get points in good projection
+scope = "fv"
+points_df = pd.read_csv(pointfiles[scope])
+points_gdf = gpd.GeoDataFrame(points_df,
+                              geometry = gpd.points_from_xy(points_df.stop_lon, points_df.stop_lat),
+                              crs="epsg:4326").to_crs('epsg:3035') # apparently best projection for Germany
+ax = germany.boundary.plot()
+grids[50000].boundary.plot(ax=ax)
+points_gdf.plot(ax=ax)
+
+# repeat the above exercise with the grid
+# get counts of stops in all shapes associated with each AGS
+for scale in sls:
+    agg_counts_gdf = grids[scale]
+    for scope in pointfiles.keys():
+        # read counts per station, with point locations
+        ncounts_df = pd.read_csv(pointfiles[scope])
+        ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
+                                       geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
+                                       crs="epsg:4326").to_crs("epsg:3035")
+        ## get sum of stuff in each AGS
+        agg_counts_gdf = gpd.sjoin(agg_counts_gdf, ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
+                            ).drop("index_right",axis=1).reset_index().dissolve(by="index",aggfunc='sum').rename({"n":"n."+scope},axis=1)
+    agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.all']>0]
+    agg_counts_gdf.to_crs('epsg:4326', inplace=True)
+    print("Writing "+ "{:.0f}".format(scale/1000,) +"k.stops.3857.geojson")
+    agg_counts_gdf.to_file(out_path + "{:.0f}".format(scale/1000,) +"k.stops.3857.geojson",driver="GeoJSON")
+
 # load the grid layers
 gridfiles = {"50k":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/50k.3857.geojson",
         "5k":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/5k.3857.geojson",
