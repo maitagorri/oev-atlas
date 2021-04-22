@@ -105,13 +105,21 @@ import numpy as np
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
 germany = world[world.name == "Germany"] # we could do a grid around all points, 
                                         # but that seems a bit excessive right now; it might be quicker this way
-                              
-                                        
-xmin,ymin,xmax,ymax =  germany.total_bounds
+# Convex hull bounding box                  
+ncounts_df = pd.read_csv(pointfiles['all'])
+ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
+                               geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
+                               crs="epsg:4326").to_crs("epsg:3035")
+stopspace = gpd.GeoDataFrame({'geometry':[ncounts_gdf.unary_union.convex_hull]}, crs="epsg:3035")
+        
+
+# iterate little boxes with sidelength sl:                                       
+xmin,ymin,xmax,ymax =  stopspace.total_bounds
 
 sls = [50, 10, 5, 1] # km
 grids = {}
 for scale in sls:
+    scale=50
     print("Making grid with sidelength "+ str(scale) + "km")
     slm = scale*1000 # m
     rows = int(np.ceil((ymax-ymin) /  slm)) 
@@ -133,6 +141,7 @@ for scale in sls:
         XrightOrigin = XrightOrigin + slm
     grid = gpd.GeoDataFrame({'geometry':polygons})
     grid.crs = 'epsg:3035'
+    gpd.sjoin(grid, stopspace, how='left', op='intersects')
     grids[scale] = grid
     ax = grid.boundary.plot()
     germany.boundary.plot(ax=ax)
