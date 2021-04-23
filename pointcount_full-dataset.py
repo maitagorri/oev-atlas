@@ -119,7 +119,6 @@ xmin,ymin,xmax,ymax =  stopspace.total_bounds
 sls = [50, 10, 5, 1] # km
 grids = {}
 for scale in sls:
-    scale=50
     print("Making grid with sidelength "+ str(scale) + "km")
     slm = scale*1000 # m
     rows = int(np.ceil((ymax-ymin) /  slm)) 
@@ -141,18 +140,20 @@ for scale in sls:
         XrightOrigin = XrightOrigin + slm
     grid = gpd.GeoDataFrame({'geometry':polygons})
     grid.crs = 'epsg:3035'
-    gpd.sjoin(grid, stopspace, how='left', op='intersects')
-    grids[scale] = grid
+    grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] # choose squares that overlap with convex hull
+    grids[scale] = grid                                                             # either save all the grids in a dict...
+#    grid.to_file(out_path + str(scale) +"k.grid.3857.geojson",driver="GeoJSON")     # or save them to file--if it gets big that may be better
     ax = grid.boundary.plot()
     germany.boundary.plot(ax=ax)
-    
+#    ncounts_gdf.plot(ax=ax)    
 # repeat the above exercise with the grid
 # get counts of stops in all shapes associated with each AGS
 for scale in sls:
     print("Getting counts for grid with sidelength "+ str(scale) + "km")
-    agg_counts_gdf = grids[scale]
+    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
+    ### !!! I'm worried we might lose shapes here, if they don't have one of the type of counts. Better to keep them separate (like above)
     for scope in pointfiles.keys():
-        print("... counting "+scope"-stops ...")
+        print("... counting "+scope+"-stops ...")
         # read counts per station, with point locations
         ncounts_df = pd.read_csv(pointfiles[scope])
         ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
@@ -164,61 +165,5 @@ for scale in sls:
     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.all']>0]
     agg_counts_gdf.to_crs('epsg:4326', inplace=True)
     print("Writing "+ str(scale) +"k.stops.3857.geojson")
-    agg_counts_gdf.to_file(out_path + str(scale) +"k.stops.3857.geojson",driver="GeoJSON")
+    agg_counts_gdf.to_file(out_path + str(scale) +"k.gesamtnetz.stops.3857.geojson",driver="GeoJSON")
 
-
-# load the grid layers
-gridfiles = {"50k":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/50k.3857.geojson",
-        "5k":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/5k.3857.geojson",
-        "0.5k":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/0.5k.3857.geojson"}
-
-def read_process_points(fname):
-    #    fname = pointfiles["fv"]
-    # specific read and process function for this set of points
-    points_agg = pd.read_csv(fname, usecols = [0,2,3]
-        # group, and count stops with same lat/lon
-        ).groupby(['stop_lat', 'stop_lon']).count().rename({"stop_name":"n"},axis=1).reset_index()
-    points_geo = gpd.GeoDataFrame(points_agg, geometry = gpd.points_from_xy(points_agg.stop_lon, points_agg.stop_lat), crs="epsg:4326").to_crs("epsg:3857")
-    return points_geo
-
-
-def npip(grid, points):
-    # find for each point which polygon it is in
-    ## assign id to each polygon
-    grid["grid_id"] = [i for i in range(len(grid))]
-    ## look only at points in grid area
-    xmin, ymin, xmax, ymax = grid.total_bounds
-    points_inside = points.cx[xmin:xmax, ymin:ymax]
-    
-    ## find which polygon each point belongs to
-    pip = gpd.sjoin(points_inside, grid, op="within")
-    # now count up occurrence of each grid polygon
-    n = pip.groupby('grid_id').sum().n.reset_index()#pd.value_counts(pip.id)
-    return n
-
-
-gridname = "50k"
-pointname = "fv"
-
-# count points and write them out
-for gridname in gridfiles.keys():
-    grid = gpd.read_file(gridfiles[gridname])
-    for pointname in pointfiles.keys():
-        points = read_process_points(pointfiles[pointname])
-        print((gridname, pointname))
-        npip(grid, points).to_csv("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+gridname + ".3857." + pointname + ".csv", index=False)
-
-for gridname in gridfiles.keys():
-    grid = gpd.read_file(gridfiles[gridname])
-    for pointname in pointfiles.keys():
-        print((gridname, pointname))
-        counts= pd.read_csv("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+gridname + ".3857." + pointname + ".csv").set_index("grid_id")
-        grid=grid.join(counts).rename({"n":"n."+pointname},axis=1)
-    grid["n"] = grid["n.nv"].fillna(0)+grid["n.rs"].fillna(0)+grid["n.nv"].fillna(0)
-    grid_sparse = grid[grid.n>0]
-    grid_sparse.to_file("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+gridname+".3857.stops.geojson",driver="GeoJSON")
-    
-grid = gpd.read_file("/home/maita/Nextcloud/Documents/Work/Gap_Map/out/0.5k3857.stops.geojson")
-
-grid.columns
-grid[~grid["n.nv"].isna()][["n.fv","n.rs","n.nv","n"]].head()

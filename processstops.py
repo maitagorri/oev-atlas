@@ -8,6 +8,7 @@ Created on Thu Apr 15 23:22:49 2021
 # load libraries
 import pandas as pd
 import os, re
+import datetime as dt
 
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
@@ -44,8 +45,11 @@ def filterByRoute(stop_times_df, routenames, routes_path = rawdatadir + "routes.
 def countPerStop(stop_times_df):
     # collapses DataFrame of stop_times to counts per stop_id
     print("Counting stops")
-    return(stop_times_df.groupby('stop_id').count().rename({"trip_id":"n"},axis=1).reset_index())
- 
+    if "days_count" in stop_times_df.columns:
+        return(stop_times_df.groupby('stop_id').sum().rename({"days_count":"n"},axis=1).reset_index()[['stop_id','n']])
+    else:
+        return(stop_times_df.groupby('stop_id').count().rename({"trip_id":"n"},axis=1).reset_index())
+
 def addLocationsToStops(counts_df, stops_path = rawdatadir + "stops.txt"):
     # Relying on or given path to file with stops and locations
     # takes stop_time-counts DataFrame and enriches them with locations
@@ -59,19 +63,88 @@ def readStopTimes(rawdatadir):
     print("Loading " + rawdatadir)
     return(pd.read_csv(rawdatadir + "stop_times.txt", usecols = ["stop_id","trip_id"]))
     
+def interveningWeekdays(start, end, inclusive=True, weekdays=[0, 1, 2, 3, 4]):
+    # a useful function from Stackoverflow, to count particular weekdays in date range
+    if isinstance(start, dt.datetime):
+        start = start.date()               # make a date from a datetime
+
+    if isinstance(end, dt.datetime):
+        end = end.date()                   # make a date from a datetime
+
+    if end < start:
+        # you can opt to return 0 or swap the dates around instead
+        # raise ValueError("start date must be before end date")
+        end, start = start, end
+
+    if inclusive:
+        end += dt.timedelta(days=1)  # correct for inclusivity
+
+    try:
+        # collapse duplicate weekdays
+        weekdays = {weekday % 7 for weekday in weekdays}
+    except TypeError:
+        weekdays = [weekdays % 7]
+
+    ref = dt.date.today()                    # choose a reference date
+    ref -= dt.timedelta(days=ref.weekday())  # and normalize its weekday
+
+    # sum up all selected weekdays (max 7 iterations)
+    return sum((ref_plus - start).days // 7 - (ref_plus - end).days // 7
+               for ref_plus in
+               (ref + dt.timedelta(days=weekday) for weekday in weekdays))
+
+def countDaysInInterval(calendarrow):
+    # function to find number of days of service operation based on calendars.txt-entry
+    weekdays = calendarrow[0:7].to_numpy().nonzero()[0].tolist()
+    startdate = dt.datetime.strptime(str(calendarrow.get("start_date")),"%Y%m%d")
+    enddate = dt.datetime.strptime(str(calendarrow.get("end_date")),"%Y%m%d")
+#    if enddate < startdate:
+#        print("switched start and end at ", calendarrow.get("service_id"))
+    return(interveningWeekdays(startdate, enddate, weekdays = weekdays))
+    
+def addFrequency(stop_times_df, 
+                 trips_path = rawdatadir + "trips.txt", 
+                 calendar_path = rawdatadir + "calendar.txt",
+                 calendar_dates_path = rawdatadir + "calendar_dates.txt"):
+    # enriches stop_times DataFrame with information about how often in a year each stop is made
+    
+    print("Getting number of service days for each stop_time")
+    # use service_id to find service...
+    # get regular service from calendar.txt
+    calendar_df = pd.read_csv(calendar_path)
+    calendar_df["days_count"] = calendar_df.apply(countDaysInInterval, axis=1)
+    # and get exceptions from calendar_dates.txt
+    calendar_dates_df = pd.read_csv(calendar_dates_path)
+    calendar_df = calendar_dates_df.groupby(["service_id", "exception_type"], as_index=False
+                              ).count(
+                            ).pivot(index = "service_id", columns = "exception_type", values = "date"
+                            ).reset_index(
+                            ).merge(calendar_df, on="service_id", how="right")
+    calendar_df.days_count= calendar_df.days_count + calendar_df[1].fillna(0) - calendar_df[2].fillna(0)
+
+    # use trip_id to look up associated trip
+    # from trip, look up service_id
+    trips_df = pd.read_csv(trips_path)
+    return(stop_times_df.merge(trips_df[["trip_id","service_id"]], on = "trip_id", how="left"
+                    ).merge(calendar_df[["service_id", "days_count"]], on = "service_id", how = "left")[["trip_id","stop_id", "days_count"]])
+    
 # Count and write out all stops per location
 addLocationsToStops(
         countPerStop(
-                readStopTimes(rawdatadir)
+                addFrequency(
+                        readStopTimes(rawdatadir)
+                        )
                 )
         ).to_csv(outdir + "nstops.csv")
 
 # Count and write out only FV-stops per location
 addLocationsToStops(
         countPerStop(
-                filterByRoute(
-                        readStopTimes(rawdatadir), 
-                        getRouteShortNames("fv"))
+                addFrequency(
+                    filterByRoute(
+                            readStopTimes(rawdatadir), 
+                            getRouteShortNames("fv"))
+                    )
                 )
         ).to_csv(outdir + "fv.nstops.csv")
 
@@ -188,3 +261,118 @@ addLocationsToStops(
 
     # count per stop_id
     # merge onto stops
+# screwy services in calendar.txt
+#switched start and end at  48690
+#switched start and end at  39678
+#switched start and end at  70243
+#switched start and end at  50649
+#switched start and end at  3709
+#switched start and end at  41322
+#switched start and end at  56831
+#switched start and end at  8555
+#switched start and end at  67418
+#switched start and end at  14299
+#switched start and end at  56521
+#switched start and end at  24379
+#switched start and end at  85349
+#switched start and end at  17231
+#switched start and end at  62387
+#switched start and end at  48438
+#switched start and end at  8824
+#switched start and end at  11382
+#switched start and end at  36763
+#switched start and end at  14501
+#switched start and end at  13351
+#switched start and end at  18270
+#switched start and end at  24255
+#switched start and end at  88503
+#switched start and end at  58819
+#switched start and end at  59504
+#switched start and end at  66667
+#switched start and end at  2783
+#switched start and end at  92231
+#switched start and end at  33342
+#switched start and end at  76859
+#switched start and end at  35238
+#switched start and end at  45059
+#switched start and end at  15998
+#switched start and end at  30623
+#switched start and end at  10013
+#switched start and end at  28065
+#switched start and end at  84566
+#switched start and end at  52409
+#switched start and end at  17057
+#switched start and end at  39914
+#switched start and end at  57899
+#switched start and end at  4954
+#switched start and end at  13269
+#switched start and end at  1888
+#switched start and end at  47868
+#switched start and end at  58814
+#switched start and end at  80388
+#switched start and end at  50269
+#switched start and end at  94098
+#switched start and end at  64844
+#switched start and end at  16803
+#switched start and end at  28939
+#switched start and end at  81996
+#switched start and end at  85045
+#switched start and end at  41463
+#switched start and end at  78571
+#switched start and end at  37424
+#switched start and end at  80157
+#switched start and end at  2266
+#switched start and end at  70815
+#switched start and end at  79583
+#switched start and end at  52256
+#switched start and end at  62241
+#switched start and end at  71292
+#switched start and end at  62549
+#switched start and end at  33296
+#switched start and end at  80126
+#switched start and end at  67793
+#switched start and end at  16960
+#switched start and end at  59449
+#switched start and end at  59086
+#switched start and end at  27519
+#switched start and end at  53982
+#switched start and end at  6038
+#switched start and end at  61519
+#switched start and end at  50962
+#switched start and end at  35949
+#switched start and end at  7163
+#switched start and end at  42795
+#switched start and end at  82621
+#switched start and end at  28830
+#switched start and end at  35698
+#switched start and end at  78859
+#switched start and end at  16626
+#switched start and end at  35794
+#switched start and end at  91702
+#switched start and end at  20713
+#switched start and end at  32449
+#switched start and end at  32825
+#switched start and end at  61694
+#switched start and end at  11104
+#switched start and end at  50825
+#switched start and end at  18433
+#switched start and end at  81816
+#switched start and end at  47270
+#switched start and end at  28853
+#switched start and end at  59946
+#switched start and end at  53533
+#switched start and end at  25322
+#switched start and end at  22760
+#switched start and end at  24742
+#switched start and end at  630
+#switched start and end at  81350
+#switched start and end at  34354
+#switched start and end at  37005
+#switched start and end at  81968
+#switched start and end at  87624
+#switched start and end at  77226
+#switched start and end at  90219
+#switched start and end at  34206
+#switched start and end at  58243
+#switched start and end at  78240
+#switched start and end at  49692
