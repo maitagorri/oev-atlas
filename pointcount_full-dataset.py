@@ -145,7 +145,8 @@ for scale in sls:
 #    grid.to_file(out_path + str(scale) +"k.grid.3857.geojson",driver="GeoJSON")     # or save them to file--if it gets big that may be better
     ax = grid.boundary.plot()
     germany.boundary.plot(ax=ax)
-#    ncounts_gdf.plot(ax=ax)    
+    
+
 # repeat the above exercise with the grid
 # get counts of stops in all shapes associated with each AGS
 for scale in sls:
@@ -163,7 +164,7 @@ for scale in sls:
         agg_counts_gdf = gpd.sjoin(agg_counts_gdf, ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
                             ).drop("index_right",axis=1).reset_index().dissolve(by="index",aggfunc='sum').rename({"n":"n."+scope},axis=1)
     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.all']>0]
-    agg_counts_gdf.to_crs('epsg:4326', inplace=True)
+    agg_counts_gdf.to_crs('epsg:3857', inplace=True)
     print("Writing "+ str(scale) +"k.stops.3857.geojson")
     agg_counts_gdf.to_file(out_path + str(scale) +"k.gesamtnetz.stops.3857.geojson",driver="GeoJSON")
 
