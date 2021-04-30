@@ -2,9 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Prototyp MapboxGL v0.3 (basiert auf philippagora/ckmav8o5rhup017o46hkopbg0)</title>
+<title>Prototyp MapboxGL v0.4 (basiert auf agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg)</title>
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://github.com/niklasvh/html2canvas/releases/download/0.4.1/html2canvas.js"></script>
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css" rel="stylesheet">
@@ -138,10 +138,10 @@ button:active {
     </div>
 
 <script>
-	mapboxgl.accessToken = 'pk.eyJ1IjoicGhpbGlwcGFnb3JhIiwiYSI6ImNrbTZjeTlnbTBteXEycXVpODZncDY4azcifQ.mtOaI1t5Qd510Dk2aMB_5g';
+	mapboxgl.accessToken = 'pk.eyJ1IjoiYWdvcmEtdmVya2VocnN3ZW5kZSIsImEiOiJja21uZnp4bmYxdWhnMm9rNTM3ZGp6N2UwIn0.MV8aPUwbFN-D3IP5dtKfQg';
     var map = new mapboxgl.Map({
         container: 'map', // container id
-        style: 'mapbox://styles/philippagora/ckmav8o5rhup017o46hkopbg0', // style URL
+        style: 'mapbox://styles/agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg', // style URL
         center: [10.371,50.937], // starting position [lng, lat]
         zoom: 6, // starting zoom
         maxBounds: [
@@ -175,10 +175,10 @@ button:active {
     });
 */
     //whatever layers you want to toggle go in to this function
-    toggleLayer(['EW Land','EW Kreis','EW Gemeinde'], 'Administrative Einheiten (Abfahrten pro EINWOHNERZAHL")');
-    toggleLayer(['SVF Land','SVF Geinden','SVF Kreis'], 'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE")');
+    toggleLayer(['EW Land','EW Kreis','EW Gemeinde', 'EW Null'], 'Administrative Einheiten (Abfahrten pro EINWOHNERZAHL")');
+    toggleLayer(['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], 'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE")');
     toggleLayer(['FV Kreis','FV Gemeinde'], 'Administrative Einheiten (Frequenz Fernverkehr)');
-    toggleLayer(['Raster 05','Raster 50'], 'Frequenz in Rasterquadraten');
+    toggleLayer(['Raster-5km','Raster-1km'], 'Frequenz in Rasterquadraten');
 
     function toggleLayer(ids, name) {
         var link = document.createElement('a');
@@ -215,6 +215,8 @@ button:active {
         $('#screenshotPlaceholder').append(imgHTML);
     }); 
     map.addControl(new mapboxgl.NavigationControl());
+
+    
 </script>
 
 </body>
