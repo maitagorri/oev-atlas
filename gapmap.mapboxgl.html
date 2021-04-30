@@ -69,9 +69,9 @@ body { margin: 0; padding: 0; }
 #buttonDiv {
   pointer-events: none;
   position: absolute;
-  top:0;
-  bottom:0;
-  width:46%;
+  bottom:10%;
+  right: 10%;
+  width:10%;
   margin:1%;
   display: flex;
   flex-direction: column;
@@ -119,7 +119,7 @@ button:active {
                 <div>
                     <input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers"><span> Terrain</span>
                 </div></label>
-            </div>
+         </div>
             <div class="leaflet-control-layers-separator" style="display: none;"></div>
             <div class="leaflet-control-layers-overlays"></div>
     </form>
@@ -129,6 +129,7 @@ button:active {
             <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-auto" checked="checked"><span> Automatic</span></label>
             <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-county"><span> County</span></label>
             <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-state"><span> State</span></label></div></form></div>
+        </div>
 </div>
 <div id='screenshotPlaceholder'>
       <h1>Screenshot</h1>
@@ -174,37 +175,48 @@ button:active {
           );
     });
 */
+    var contentTitles = ['Administrative Einheiten (Abfahrten pro EINWOHNERZAHL)',
+                            'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE)',
+                            'Administrative Einheiten (Frequenz Fernverkehr)',
+                            'Frequenz in Rasterquadraten'
+                        ]
+    var contentLayerGroups = [['EW Land','EW Kreis','EW Gemeinde', 'EW Null'],
+                                ['SF Land','SF Gemeinde','SF Kreis', 'SF Null'],
+                                ['FV Kreis','FV Gemeinde'],
+                                ['Raster-5km','Raster-1km']
+                            ]
+    var contentLayers = [].concat(...contentLayerGroups)
+    
     //whatever layers you want to toggle go in to this function
-    toggleLayer(['EW Land','EW Kreis','EW Gemeinde', 'EW Null'], 'Administrative Einheiten (Abfahrten pro EINWOHNERZAHL")');
-    toggleLayer(['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], 'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE")');
-    toggleLayer(['FV Kreis','FV Gemeinde'], 'Administrative Einheiten (Frequenz Fernverkehr)');
-    toggleLayer(['Raster-5km','Raster-1km'], 'Frequenz in Rasterquadraten');
 
     function toggleLayer(ids, name) {
         var link = document.createElement('a');
         link.href = '#';
-        link.className = 'active';
+        link.className = 'none';
         link.textContent = name;
 
         link.onclick = function (e) {
             e.preventDefault();
             e.stopPropagation();
-            for (layers in ids){
-                var visibility = map.getLayoutProperty(ids[layers], 'visibility');
+            ids.forEach(layerId => {
+                var visibility = map.getLayoutProperty(layerId, 'visibility');
+                console.log(visibility)
                 if (visibility === 'visible') {
-                    map.setLayoutProperty(ids[layers], 'visibility', 'none');
+                    map.setLayoutProperty(layerId, 'visibility', 'none');
                     this.className = '';
                 } else {
                     this.className = 'active';
-                    map.setLayoutProperty(ids[layers], 'visibility', 'visible');
+                    map.setLayoutProperty(layerId, 'visibility', 'visible');
+                    for (otherLayer in map.getStyle().Layers){console.log(otherLayer)}
                 }
-             }
+             });
 
         };
 
-        var layers = document.getElementById('menu');
-        layers.appendChild(link);
+        var layerMenu = document.getElementById('menu');
+        layerMenu.appendChild(link);
     }
+
 
     $('button').click(function() {
         var img  = map.getCanvas().toDataURL();
@@ -216,6 +228,22 @@ button:active {
     }); 
     map.addControl(new mapboxgl.NavigationControl());
 
+map.once('style.load', function() {
+//set all layers invisible to start
+//        for (layerId in map.getStyle().layers){
+ //           map.setLayoutProperty(layerId, 'visibility', 'none');
+ //       }
+    // make all layers invisible
+    contentLayers.forEach(layerId => {
+        map.setLayoutProperty(layerId, 'visibility', 'none');
+    });
+
+    // set up layer buttons
+    contentLayerGroups.forEach((layerGroup, index) => {
+        const name = contentTitles[index];
+        toggleLayer(layerGroup, name);
+    });
+})
     
 </script>
 
