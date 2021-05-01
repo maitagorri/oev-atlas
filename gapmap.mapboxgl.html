@@ -192,27 +192,37 @@ button:active {
     function toggleLayer(ids, name) {
         var link = document.createElement('a');
         link.href = '#';
-        link.className = 'none';
+        link.className = '';
         link.textContent = name;
 
         link.onclick = function (e) {
             e.preventDefault();
             e.stopPropagation();
-            ids.forEach(layerId => {
-                var visibility = map.getLayoutProperty(layerId, 'visibility');
-                console.log(visibility)
-                if (visibility === 'visible') {
-                    map.setLayoutProperty(layerId, 'visibility', 'none');
+            if (this.className === 'active') {
+                ids.forEach(layerId => {
+                    map.setLayoutProperty(layerId, 'visibility', 'none')
+                    });
                     this.className = '';
                 } else {
+                    // turn off other layers
+                    contentLayers.forEach(otherId => {
+                        if (!ids.includes(otherId)){
+                            map.setLayoutProperty(otherId, 'visibility', 'none')
+                        }})
+                    // turn off other buttons
+                    var nodes = document.getElementById('menu').childNodes;
+                    nodes.forEach(node => {
+                        if (!ids.includes(node.textContent)){
+                            node.className = '';
+                        }})
+                    // turn on these layers
+                    ids.forEach(layerId => {
+                        map.setLayoutProperty(layerId, 'visibility', 'visible');
+                    });
+                    // turn on this button
                     this.className = 'active';
-                    map.setLayoutProperty(layerId, 'visibility', 'visible');
-                    for (otherLayer in map.getStyle().Layers){console.log(otherLayer)}
-                }
-             });
-
-        };
-
+                };
+            };
         var layerMenu = document.getElementById('menu');
         layerMenu.appendChild(link);
     }
