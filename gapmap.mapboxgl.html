@@ -4,21 +4,19 @@
 <meta charset="utf-8">
 <title>Prototyp MapboxGL v0.4 (basiert auf agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg)</title>
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script src="https://github.com/niklasvh/html2canvas/releases/download/0.4.1/html2canvas.js"></script>
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js"></script>
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css" rel="stylesheet"></link>
 <style>
 body { margin: 0; padding: 0; }
-#map { position: absolute; top: 0; bottom: 0; width: 46%; }
+#map { position: absolute; top: 0; bottom: 0; width: 96%; }
     #menu {
     background: #fff;
     position: absolute;
     z-index: 1;
     top: 10px;
-    right: 10px;
+    left: 10px;
     border-radius: 3px;
-    width: 240px;
+    width: 20%;
     border: 1px solid rgba(0, 0, 0, 0.4);
     font-family: 'Open Sans', sans-serif;
     }
@@ -52,91 +50,14 @@ body { margin: 0; padding: 0; }
     #menu a.active:hover {
     background: #3074a4;
 }
-   #screenshotPlaceholder {
-  position:absolute;
-  left:50%;
-  top:0;
-  bottom:0;
-  width:46%;
-  min-height: 300px;
-  margin:1%;
-  background-color:lightblue;
-  border-style: solid;
-  border-width: 5px;
-  border-color: green;
-}
 
-#buttonDiv {
-  pointer-events: none;
-  position: absolute;
-  bottom:10%;
-  right: 10%;
-  width:10%;
-  margin:1%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-button {
-  pointer-events:auto;
-  transform: translate(0, 200%);
-  padding: 10px 20px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  color:white;
-  background-color: rgb(42, 42, 242);
-  box-shadow: 0px 5px 0px 0px rgb(11, 11, 92);
-}
-
-button:active {
-  transform: translate(0, calc(200% + 5px));
-  -webkit-transform: translate(0, calc(200% + 5px));
-  text-decoration: none;
-  box-shadow: 0px 2px 0px 0px rgb(11, 11, 92);
-}
 
 
 </style>
 </head>
 <body>
 <nav id="menu"></nav>
-<div id="map">
-<div class="leaflet-control-layers leaflet-control" aria-haspopup="true">
-    <a class="leaflet-control-layers-toggle" href="#" title="Layers"></a>
-    <form class="leaflet-control-layers-list">
-        <div class="leaflet-control-layers-base">
-            <label>
-                <div>
-                    <input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers" checked="checked"><span> Street</span>
-                </div></label>
-            <label>
-                <div>
-                    <input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers"><span> Satellite</span>
-                </div></label>
-            <label>
-                <div>
-                    <input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers"><span> Terrain</span>
-                </div></label>
-         </div>
-            <div class="leaflet-control-layers-separator" style="display: none;"></div>
-            <div class="leaflet-control-layers-overlays"></div>
-    </form>
-    <form class="leaflet-control-layers-list leaflet-control-layers-list-zoom">
-        <div class="leaflet-control-layers-separator"></div>
-        <div class="leaflet-control-layers-zoom">
-            <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-auto" checked="checked"><span> Automatic</span></label>
-            <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-county"><span> County</span></label>
-            <label><input type="radio" class="leaflet-control-layers-selector-zoom zoom-layers-control" name="leaflet-zoom-layers" id="leaflet-zoom-layers-state"><span> State</span></label></div></form></div>
-        </div>
-</div>
-<div id='screenshotPlaceholder'>
-      <h1>Screenshot</h1>
-    </div>
-;<div id='buttonDiv'>
-      <button type="button">Take Screenshot</button>
-    </div>
+<div id="map"></div>
 
 <script>
 	mapboxgl.accessToken = 'pk.eyJ1IjoiYWdvcmEtdmVya2VocnN3ZW5kZSIsImEiOiJja21uZnp4bmYxdWhnMm9rNTM3ZGp6N2UwIn0.MV8aPUwbFN-D3IP5dtKfQg';
@@ -152,29 +73,6 @@ button:active {
     preserveDrawingBuffer: true
     });
 
- /*   map.on('mousemove', function(evt) {
-        // The event object (e) contains information like the
-        // coordinates of the point on the map that was clicked.
-        console.log('A move event has occurred at ' + evt.lngLat);
-        map.featuresAt(
-            evt.point,
-            {
-              radius: 15,
-              layer: ['EW Land','EW Kreis','EW Gemeinde'], //we chose which layers should be 'hoverable'
-            },
-            (err, features) => {
-              //if features are hovered, display a tooltip with the data
-              if (features.length) {
-                tooltip.update(features[0].properties);
-                tooltip.updatePosition(evt.point);
-              } else {
-                //if no features were found, hide the tooltip
-                tooltip.hide();
-              }
-            }
-          );
-    });
-*/
     var contentTitles = ['Administrative Einheiten (Abfahrten pro EINWOHNERZAHL)',
                             'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE)',
                             'Administrative Einheiten (Frequenz Fernverkehr)',
@@ -219,6 +117,7 @@ button:active {
                     ids.forEach(layerId => {
                         map.setLayoutProperty(layerId, 'visibility', 'visible');
                     });
+                    // send 
                     // turn on this button
                     this.className = 'active';
                 };
@@ -227,22 +126,30 @@ button:active {
         layerMenu.appendChild(link);
     }
 
+    function makeLegend(id, name){
+        var legend = document.createElement('div');
+        legend.id = name;
+        legend.class = "legend";
+        legend.style = "display: none";
+        legend.toggle = function(e){
+            // function to call from toggle buttons
+            // depending on zoom state, hide or show 
+        }
+        // listen to zoom: switch display state if zoomed in or out
+        // depending on toggled display state
+    }
+    
+map.addControl(new mapboxgl.NavigationControl());
+//try to make a legend
+map.on('load', function() {
+    var allLayers = map.getStyle().layers;
+    allLayers.forEach(layer => {
+        if(contentLayers.includes(layer.id)){console.log(layer.id)}
+    })
+});
 
-    $('button').click(function() {
-        var img  = map.getCanvas().toDataURL();
-        var width = $('#screenshotPlaceholder').width()
-        var height = $('#screenshotPlaceholder').height()
-        var imgHTML = `<img src="${img}", width=${width}, height = ${height}/>`
-        $('#screenshotPlaceholder').empty();
-        $('#screenshotPlaceholder').append(imgHTML);
-    }); 
-    map.addControl(new mapboxgl.NavigationControl());
-
-map.once('style.load', function() {
 //set all layers invisible to start
-//        for (layerId in map.getStyle().layers){
- //           map.setLayoutProperty(layerId, 'visibility', 'none');
- //       }
+map.once('style.load', function() {
     // make all layers invisible
     contentLayers.forEach(layerId => {
         map.setLayoutProperty(layerId, 'visibility', 'none');
@@ -254,6 +161,8 @@ map.once('style.load', function() {
         toggleLayer(layerGroup, name);
     });
 })
+
+
     
 </script>
 
