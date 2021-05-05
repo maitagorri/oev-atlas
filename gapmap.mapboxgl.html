@@ -73,15 +73,16 @@ body { margin: 0; padding: 0; }
     preserveDrawingBuffer: true
     });
 
-    var contentTitles = ['Administrative Einheiten (Abfahrten pro EINWOHNERZAHL)',
-                            'Administrative Einheiten (Abfahrten pro SIEDLUNGSFLÄCHE)',
-                            'Administrative Einheiten (Frequenz Fernverkehr)',
-                            'Frequenz in Rasterquadraten'
+    var contentTitles = ['Abfahrten je bebauter Fläche', // Philipp hat Bezeichnung und Reihenfolge aller LayerGroups geändert
+                         'Abfahrten je Einwohner',                         
+                         'Abfahrten je Fläche (Raster)',
+                         'Nur Fernverkehr'
                         ]
-    var contentLayerGroups = [['EW Land','EW Kreis','EW Gemeinde', 'EW Null'],
-                                ['SF Land','SF Gemeinde','SF Kreis', 'SF Null'],
-                                ['FV Kreis','FV Gemeinde'],
-                                ['Raster-5km','Raster-1km']
+    var contentLayerGroups = [['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], //Philipp hat Reihenfolge aller LayerGroups geändert
+                              ['EW Land','EW Kreis','EW Gemeinde', 'EW Null'],
+                               ['Raster-5km','Raster-1km'],
+                                ['FV Gemeinde simp','FV Gemeinde'] // Philipp hat Layer FV Kreis ersetzt durch FV Gemeinde simp
+                               
                             ]
     var contentLayers = [].concat(...contentLayerGroups)
     
