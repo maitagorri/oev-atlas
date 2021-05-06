@@ -8,7 +8,7 @@
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css" rel="stylesheet"></link>
 <style>
 body { margin: 0; padding: 0; }
-#map { position: absolute; top: 0; bottom: 0; width: 96%; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
     #menu {
     background: #fff;
     position: absolute;
@@ -56,8 +56,69 @@ body { margin: 0; padding: 0; }
 </style>
 </head>
 <body>
+    <style>
+        .legend {
+            background-color: #fff;
+            border-radius: 3px;
+            bottom: 30px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            padding: 10px;
+            position: absolute;
+            left: 10px;
+            z-index: 1;
+            }
+         
+        .legend h4 {
+            margin: 0 0 10px;   
+            }
+         
+        .legend div span {
+            border-radius: 50%;
+            display: inline-block;
+            height: 10px;
+            margin-right: 5px;
+            width: 10px;
+            }
+    </style>
 <nav id="menu"></nav>
 <div id="map"></div>
+
+<div id="sf-legend" class="legend" style="display: none">
+    <h4>Abfahrten je km² Siedlungsfläche </h4>
+    <div><span style="background-color: #e7e8e3"></span>> 0</div>
+    <div><span style="background-color: #c6dbe2"></span>> 20 000</div>
+    <div><span style="background-color: #9ac8df"></span>> 50 000</div>
+    <div><span style="background-color: #6eb6dd"></span>> 100 000</div>
+    <div><span style="background-color: #3da1db"></span>> 200 000</div>
+</div>
+ 
+<div id="ew-legend" class="legend" style="display: none">
+    <h4>Abfahrten je Einwohner</h4>
+    <div><span style="background-color: #e7e8e3"></span>> 0</div>
+    <div><span style="background-color: #c9d9c4"></span>> 5</div>
+    <div><span style="background-color: #aecda8"></span>> 15</div>
+    <div><span style="background-color: #85b97e"></span>> 30</div>
+    <div><span style="background-color: #55a34d"></span>> 50</div>
+</div>
+
+<div id="raster-legend" class="legend" style="display: none">
+    <h4>Abfahrten je km²</h4>
+    <div><span style="background-color: #e7e8e3"></span>> 0</div>
+    <div><span style="background-color: #c2d1ca"></span>> 1 000</div>
+    <div><span style="background-color: #92b5aa"></span>> 5 000</div>
+    <div><span style="background-color: #66998d"></span>> 10 000</div>
+    <div><span style="background-color: #2d7666"></span>> 20 000</div>
+</div>
+
+<div id="fv-legend" class="legend" style="display: none">
+    <h4>Fernverkehrsabfahrten je Gemeinde</h4>
+    <div><span style="background-color: #e7e8e3"></span>> 0</div>
+    <div><span style="background-color: #d8d5d7"></span>> 5 000</div>
+    <div><span style="background-color: #cac2cb"></span>> 10 000</div>
+    <div><span style="background-color: #bcafc0"></span>> 25 000</div>
+    <div><span style="background-color: #a28cab"></span>> 50 000</div>
+</div>
 
 <script>
 	mapboxgl.accessToken = 'pk.eyJ1IjoiYWdvcmEtdmVya2VocnN3ZW5kZSIsImEiOiJja21uZnp4bmYxdWhnMm9rNTM3ZGp6N2UwIn0.MV8aPUwbFN-D3IP5dtKfQg';
@@ -73,12 +134,17 @@ body { margin: 0; padding: 0; }
     preserveDrawingBuffer: true
     });
 
-    var contentTitles = ['Abfahrten je bebauter Fläche', // Philipp hat Bezeichnung und Reihenfolge aller LayerGroups geändert
-                         'Abfahrten je Einwohner',                         
-                         'Abfahrten je Fläche (Raster)',
-                         'Nur Fernverkehr'
-                        ]
-    var contentLayerGroups = [['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], //Philipp hat Reihenfolge aller LayerGroups geändert
+// hier ist die Reihenfolge wichtig!!
+
+    var legendId = {'Abfahrten je bebauter Fläche':'sf-legend', 
+                         'Abfahrten je Einwohner':'ew-legend',                         
+                         'Abfahrten je Fläche (Raster)':'raster-legend',
+                         'Nur Fernverkehr':'fv-legend'
+    }
+    
+    // what a hack--future: structure legends, ids, button text and layer groups properly
+    var contentTitles = Object.keys(legendId)
+    var contentLayerGroups = [['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], 
                               ['EW Land','EW Kreis','EW Gemeinde', 'EW Null'],
                                ['Raster-5km','Raster-1km'],
                                 ['FV Gemeinde simp','FV Gemeinde'] // Philipp hat Layer FV Kreis ersetzt durch FV Gemeinde simp
@@ -88,7 +154,7 @@ body { margin: 0; padding: 0; }
     
     //whatever layers you want to toggle go in to this function
 
-    function toggleLayer(ids, name) {
+    function addToggleLayer(ids, name) {
         var link = document.createElement('a');
         link.href = '#';
         link.className = '';
@@ -98,27 +164,39 @@ body { margin: 0; padding: 0; }
             e.preventDefault();
             e.stopPropagation();
             if (this.className === 'active') {
+                // turn off these layers
                 ids.forEach(layerId => {
                     map.setLayoutProperty(layerId, 'visibility', 'none')
                     });
-                    this.className = '';
+                // turn off this legend
+                    document.getElementById(legendId[name]).style = "display: none"
+                // turn off this button
+                this.className = '';
                 } else {
                     // turn off other layers
                     contentLayers.forEach(otherId => {
                         if (!ids.includes(otherId)){
                             map.setLayoutProperty(otherId, 'visibility', 'none')
                         }})
+                    // turn off other legends
+                    contentTitles.forEach(otherTitle =>{
+                        if (otherTitle != name){
+                            otherLegend = document.getElementById(legendId[otherTitle])
+                            otherLegend.style = "display: none"
+                        }
+                    })
                     // turn off other buttons
-                    var nodes = document.getElementById('menu').childNodes;
-                    nodes.forEach(node => {
-                        if (!ids.includes(node.textContent)){
-                            node.className = '';
+                    var buttons = document.getElementById('menu').childNodes;
+                    buttons.forEach(button => {
+                        if (button.textContent!=name){
+                            button.className = '';
                         }})
                     // turn on these layers
                     ids.forEach(layerId => {
                         map.setLayoutProperty(layerId, 'visibility', 'visible');
                     });
-                    // send 
+                    // turn on this legend
+                    document.getElementById(legendId[name]).style = ''
                     // turn on this button
                     this.className = 'active';
                 };
@@ -127,7 +205,7 @@ body { margin: 0; padding: 0; }
         layerMenu.appendChild(link);
     }
 
-    function makeLegend(id, name){
+/*    function makeLegend(id, name){
         var legend = document.createElement('div');
         legend.id = name;
         legend.class = "legend";
@@ -139,15 +217,9 @@ body { margin: 0; padding: 0; }
         // listen to zoom: switch display state if zoomed in or out
         // depending on toggled display state
     }
-    
+*/
+
 map.addControl(new mapboxgl.NavigationControl());
-//try to make a legend
-map.on('load', function() {
-    var allLayers = map.getStyle().layers;
-    allLayers.forEach(layer => {
-        if(contentLayers.includes(layer.id)){console.log(layer.id)}
-    })
-});
 
 //set all layers invisible to start
 map.once('style.load', function() {
@@ -159,8 +231,11 @@ map.once('style.load', function() {
     // set up layer buttons
     contentLayerGroups.forEach((layerGroup, index) => {
         const name = contentTitles[index];
-        toggleLayer(layerGroup, name);
+        addToggleLayer(layerGroup, name);
     });
+    
+    // turn on starting group
+    document.getElementById('menu').firstChild.click()
 })
 
 
