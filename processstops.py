@@ -12,8 +12,8 @@ import datetime as dt
 
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
-rawdatadir = rawdir + "gtfs/2021/"
-outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
+rawdatadir = rawdir + "gtfs/2020/"
+outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/2020/"
 
 
 def getRouteShortNames(scope):

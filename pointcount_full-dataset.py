@@ -15,7 +15,7 @@ import pandas as pd
 import geopandas as gpd
 
 # define the points layers
-out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
+out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/2020/"
 pointfiles = {"all":out_path + "nstops.csv",
 
               "fv":out_path + "fv.nstops.csv"}
@@ -72,7 +72,7 @@ for level in shapefiles.keys():
     agg_gdf = exists_gdf.merge(agg_counts_df, on='AGS'
                         ).merge(agg_areas_df, on='AGS')
     # Merge SFL onto shape
-        # reading in the corresponding Siedlungsflaeche
+    # reading in the corresponding Siedlungsflaeche
     area_sfl_path = sfl_tables[level]
     area_sfl_df = pd.read_csv(area_sfl_path, skiprows = [1], sep = ";", decimal = ",")
     
@@ -116,8 +116,8 @@ stopspace = gpd.GeoDataFrame({'geometry':[ncounts_gdf.unary_union.convex_hull]},
 # iterate little boxes with sidelength sl:                                       
 xmin,ymin,xmax,ymax =  stopspace.total_bounds
 
-sls = [50, 10, 5, 1] # km
-grids = {}
+sls = [5, 1] # km 50, 10, 1, 
+#grids = {}
 for scale in sls:
     print("Making grid with sidelength "+ str(scale) + "km")
     slm = scale*1000 # m
@@ -141,17 +141,18 @@ for scale in sls:
     grid = gpd.GeoDataFrame({'geometry':polygons})
     grid.crs = 'epsg:3035'
     grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] # choose squares that overlap with convex hull
-    grids[scale] = grid                                                             # either save all the grids in a dict...
-#    grid.to_file(out_path + str(scale) +"k.grid.3857.geojson",driver="GeoJSON")     # or save them to file--if it gets big that may be better
-    ax = grid.boundary.plot()
-    germany.boundary.plot(ax=ax)
+#    grids[scale] = grid                                                             # either save all the grids in a dict...
+    grid.to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")     # or save them to file--if it gets big that may be better
+#    ax = grid.boundary.plot()
+#    germany.boundary.plot(ax=ax)
     
 
 # repeat the above exercise with the grid
 # get counts of stops in all shapes associated with each AGS
 for scale in sls:
     print("Getting counts for grid with sidelength "+ str(scale) + "km")
-    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
+#    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
+    agg_counts_gdf = gpd.read_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
     ### !!! I'm worried we might lose shapes here, if they don't have one of the type of counts. Better to keep them separate (like above)
     for scope in pointfiles.keys():
         print("... counting "+scope+"-stops ...")
