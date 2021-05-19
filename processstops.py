@@ -10,10 +10,13 @@ import pandas as pd
 import os, re
 import datetime as dt
 
+# Welches Jahr?
+jahr = "2021"
+
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
-rawdatadir = rawdir + "gtfs/2020/"
-outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/2020/"
+rawdatadir = rawdir + "gtfs/" + jahr + "/"
+outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+jahr+"/"
 
 
 def getRouteShortNames(scope):
@@ -198,7 +201,7 @@ addLocationsToStops(
 #
 #    
 #            
-#allroutes = pd.read_csv(rawdatadir + "routes.txt", usecols = ["route_short_name", "route_long_name", "route_id"])
+#allroutes = pd.read_csv(rawdatadir + "routes", usecols = ["route_short_name", "route_long_name", "route_id"])
 #alltrips = pd.read_csv(rawdatadir + "trips.txt", usecols = ['route_id', "trip_id"])
 #allstop_times = pd.read_csv(rawdatadir + "stop_times.txt", usecols = ["stop_id","trip_id"])  
 #

@@ -14,8 +14,11 @@ geographies.
 import pandas as pd
 import geopandas as gpd
 
+# Welches Jahr?
+jahr = "2020"
+
 # define the points layers
-out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
+out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/" + jahr + "/"
 pointfiles = {"all":out_path + "nstops.csv",
 
               "fv":out_path + "fv.nstops.csv"}
@@ -37,28 +40,31 @@ sfl_tables= {"gem":geo_path + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
               "kre":geo_path + "Tabelle_Siedlungsflaeche_Kreis.csv",
               "lan":geo_path + "Tabelle_Siedlungsflaeche_Land.csv"}
 
-for level in shapefiles.keys():
-    # Read in admin areas
-    area_path = shapefiles[level]
-    area_gdf = gpd.read_file(area_path)
+
+def scopeCountsInAreas(countname, ncounts_df, area_gdf):
+    # read counts per station, with point locations
+    ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
+                                   geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
+                                   crs="epsg:4326").to_crs("epsg:4326")
+    ## get sum of stuff in each AGS
+    agg_counts_df = gpd.sjoin(area_gdf[["AGS","geometry"]], ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
+                        )[["AGS","n"]
+                        ].groupby("AGS").sum().rename({"n":countname},axis=1
+                        ) # keep AGS that have counts in them
+    return(agg_counts_df)
+    
+    
+def aggregateShapes(area_gdf, pointfiles):
     # fix projection
-    area_gdf = area_gdf.to_crs("epsg:3857")
+    area_gdf = area_gdf.to_crs("epsg:4326")
     area_gdf.AGS = area_gdf.AGS.astype(int) # to compare to other sources, get reasonable type for AGS
   
     # get counts of stops in all shapes associated with each AGS
     agg_counts_df = area_gdf[["AGS"]].drop_duplicates()
-    for scope in pointfiles.keys():
-        print("Counting "+scope+" in "+level)
-        # read counts per station, with point locations
+    for scope in pointfiles.keys():        
+        print("Counting "+scope)
         ncounts_df = pd.read_csv(pointfiles[scope])
-        ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
-                                       geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
-                                       crs="epsg:4326").to_crs("epsg:3857")
-        ## get sum of stuff in each AGS
-        agg_counts_df = gpd.sjoin(area_gdf[["AGS","geometry"]], ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
-                            )[["AGS","n"]
-                            ].groupby("AGS").sum().rename({"n":"n."+scope},axis=1
-                            ).merge(agg_counts_df, how="right", on="AGS") # keep AGS that have counts in them
+        agg_counts_df = scopeCountsInAreas("n."+scope, ncounts_df, area_gdf).merge(agg_counts_df, how="right", on="AGS") 
 
     # Aggregate other metrics by AGS
     agg_areas_df = area_gdf[["AGS","KFL","EWZ"]       # select only relevant cols
@@ -86,9 +92,18 @@ for level in shapefiles.keys():
         agg_sfl_gdf['n.'+scope+'.kfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['KFL']
         agg_sfl_gdf['n.'+scope+'.sfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['SFL']
     # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
-    agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']
-    ].to_file(out_path + level +".stops.3857.geojson",driver="GeoJSON")
-    print("Wrote " + level +".stops.3857.geojson")
+    return(agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']])
+
+for level in shapefiles.keys():
+    area_path = shapefiles[level]
+    # Read in admin areas
+    area_gdf = gpd.read_file(area_path)
+    # process
+    agg_gdf = aggregateShapes(area_gdf, pointfiles)
+    # write out:
+    out_file = level +".stops.4326.geojson"
+    agg_gdf.to_file(out_path + out_file, driver="GeoJSON")
+    print("Wrote " + out_file)
 
 
 
@@ -115,11 +130,16 @@ stopspace = gpd.GeoDataFrame({'geometry':[ncounts_gdf.unary_union.convex_hull]},
 
 # iterate little boxes with sidelength sl:                                       
 xmin,ymin,xmax,ymax =  stopspace.total_bounds
-
 sls = [5, 1] # km 50, 10, 1, 
 #grids = {}
-for scale in sls:
+
+def make_grid(scale, stopspace):   
+    # scale is a sidelength in km
+    # stopspace is a Geodataframe containing the complex hull of the space to be covered with grid, IN EPSG:3035
     print("Making grid with sidelength "+ str(scale) + "km")
+    # iterate little boxes with sidelength sl:
+    bounds = stopspace.total_bounds
+    xmin,ymin,xmax,ymax =  bounds
     slm = scale*1000 # m
     rows = int(np.ceil((ymax-ymin) /  slm)) 
     cols = int(np.ceil((xmax-xmin) / slm))  
@@ -141,31 +161,42 @@ for scale in sls:
     grid = gpd.GeoDataFrame({'geometry':polygons})
     grid.crs = 'epsg:3035'
     grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] # choose squares that overlap with convex hull
-#    grids[scale] = grid                                                             # either save all the grids in a dict...
-    grid.to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")     # or save them to file--if it gets big that may be better
+#    grids[scale] = grid                                                             # either save all the grids in a dict...    # or save them to file--if it gets big that may be better
+    return(grid)
 #    ax = grid.boundary.plot()
-#    germany.boundary.plot(ax=ax)
-    
+#    germany.boundary.plot(ax=ax) 
 
-# repeat the above exercise with the grid
+# repeat the above exercise with the grid:
 # get counts of stops in all shapes associated with each AGS
 for scale in sls:
-    print("Getting counts for grid with sidelength "+ str(scale) + "km")
+    grid = gpd.read_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
+
+grid = make_grid(50, stopspace)
+def aggregateGrid(grid, pointfiles):
+    print("Getting counts for grid with " + str(len(grid)) + " polygons")
 #    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
-    agg_counts_gdf = gpd.read_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
-    ### !!! I'm worried we might lose shapes here, if they don't have one of the type of counts. Better to keep them separate (like above)
+    agg_counts_gdf = grid.to_crs('epsg:4326')
+    ### !!! I'm worried we might lose shapes here, if they don't have one of the type of counts. Maybe better to keep them separate (like above)
     for scope in pointfiles.keys():
         print("... counting "+scope+"-stops ...")
         # read counts per station, with point locations
         ncounts_df = pd.read_csv(pointfiles[scope])
         ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
                                        geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
-                                       crs="epsg:4326").to_crs("epsg:3035")
+                                       crs="epsg:4326").to_crs("epsg:4326")
         ## get sum of stuff in each AGS
         agg_counts_gdf = gpd.sjoin(agg_counts_gdf, ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
                             ).drop("index_right",axis=1).reset_index().dissolve(by="index",aggfunc='sum').rename({"n":"n."+scope},axis=1)
     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.all']>0]
-    agg_counts_gdf.to_crs('epsg:4326', inplace=True)
-    print("Writing "+ str(scale) +"k.stops.4326.geojson")
-    agg_counts_gdf.to_file(out_path + str(scale) +"k.gesamtnetz.stops.4326.geojson",driver="GeoJSON")
+    return(agg_counts_gdf)
+    
+    
+for scale in sls:   
+    agg_counts_gdf = aggregateGrid(
+            make_grid(scale, stopspace.total_bounds).to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON"),
+            pointfiles)
+    # write out:
+    out_file = str(scale) +"k.stops.4326.geojson"
+    print("Writing "+ out_file)
+    agg_counts_gdf.to_file(out_path + out_file,driver="GeoJSON")
 
