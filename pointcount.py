@@ -6,7 +6,6 @@ Created on Thu Mar  4 20:51:56 2021
 @author: maita
 """
 
-import fiona
 import pandas as pd
 import geopandas as gpd
 
