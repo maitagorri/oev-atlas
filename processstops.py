@@ -11,7 +11,7 @@ import os, re
 import datetime as dt
 
 # Welches Jahr?
-jahr = "2021"
+jahr = "2020"
 
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
@@ -22,12 +22,14 @@ outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+jahr+"/"
 def getRouteShortNames(scope):
     # Relying on pre-separated routes file in raw directory
     # takes scope prefix and gets short_names to filter for
+    # !!! This only works for Fernverkehr!!!
     print("Scope for routes: "+ scope)
-    routespath = [s for s in os.listdir(rawdir) if re.search("routes_"+scope, s) ][0]
-    routes_df = pd.read_csv(rawdir + routespath)
+    routespath = [s for s in os.listdir(rawdatadir) if re.search("routes_"+scope, s) ][0]
+    routes_df = pd.read_csv(rawdatadir + routespath)
     routenames = routes_df.route_short_name.unique()
 #    routeids = routes_df.route_id.unique()
     return(routenames)
+
 
 def filterByRoute(stop_times_df, routenames, routes_path = rawdatadir + "routes.txt", trips_path = rawdatadir + "trips.txt"):
     # Given a list of route_short_names included in scope
