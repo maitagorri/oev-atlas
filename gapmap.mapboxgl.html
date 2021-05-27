@@ -128,11 +128,12 @@ body { margin: 0; padding: 0; }
         container: 'map', // container id
         style: 'mapbox://styles/agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg', // style URL
         center: [10.371,50.937], // starting position [lng, lat]
-        zoom: 6, // starting zoom
-        maxBounds: [
-            [4, 46],
-            [17, 56],
-        ],
+        zoom: 5.5, // starting zoom
+        /*maxBounds: [
+            [0, 43.97],
+            [23.52, 60.11],
+        ],*/
+        minZoom: 4,
     preserveDrawingBuffer: true
     });
 
