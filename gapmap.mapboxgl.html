@@ -10,6 +10,7 @@
 body { margin: 0; padding: 0; }
 #map { position: absolute; top: 0; bottom: 0; width: 100%; }
     #menu {
+    min-width: 93px;
     background: #fff;
     position: absolute;
     z-index: 1;
@@ -58,6 +59,7 @@ body { margin: 0; padding: 0; }
 <body>
     <style>
         .legend {
+            width: 96px;
             background-color: #fff;
             border-radius: 3px;
             bottom: 30px;
@@ -127,7 +129,7 @@ body { margin: 0; padding: 0; }
     var map = new mapboxgl.Map({
         container: 'map', // container id
         style: 'mapbox://styles/agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg', // style URL
-        center: [10.371,50.937], // starting position [lng, lat]
+        center: [9.671,51.237], // starting position [lng, lat]
         zoom: 5.5, // starting zoom
         /*maxBounds: [
             [0, 43.97],
