@@ -20,10 +20,10 @@ gtfs = sapply(paths, read_gtfs)
 ```
 Look at them
 ```{r}
-print("SUMMARIES")
-sapply(gtfs, summary)
-print("VALIDATIONS")
-lapply(gtfs, function(g){attr(g, "validation_result")})
+# print("SUMMARIES")
+# sapply(gtfs, summary)
+# print("VALIDATIONS")
+# lapply(gtfs, function(g){attr(g, "validation_result")})
 ```
 
 Frequencies?

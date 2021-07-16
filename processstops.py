@@ -11,7 +11,7 @@ import os, re
 import datetime as dt
 
 # Welches Jahr?
-jahr = "2020"
+jahr = "2021"
 
 # define paths
 rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
@@ -140,7 +140,7 @@ addLocationsToStops(
                         readStopTimes(rawdatadir)
                         )
                 )
-        ).to_csv(outdir + "nstops.csv")
+        ).to_csv(outdir + "210715_nstops.csv")
 
 # Count and write out only FV-stops per location
 addLocationsToStops(
@@ -151,7 +151,7 @@ addLocationsToStops(
                             getRouteShortNames("fv"))
                     )
                 )
-        ).to_csv(outdir + "fv.nstops.csv")
+        ).to_csv(outdir + "210715_fv.nstops.csv")
 
 #outfiles = {"fv":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/fv.nstops.csv",
 #          "rs":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/rs.nstops.csv",
