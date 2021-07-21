@@ -24,8 +24,8 @@ gdfs = {y:{
 
 {level:gdfs for level in levels}
 
-df1= gdfs["2020"]["gem"]
-df2= gdfs["2021"]["gem"]
+gem_20_gdf= gdfs["2020"]["gem"]
+gem_21_gdf= gdfs["2021"]["gem"]
 gem_21_gdf.columns
 gem_20_gdf.merge(gem_21_gdf.drop("geometry", axis=1), how="right", on="AGS")
 
@@ -39,7 +39,7 @@ def ndiff(df1, df2, idcols, func = lambda a,b: b-a):
     diff_gdf = df1.drop(ncols, axis=1).merge(diff_df, on=idcols)
     return(diff_gdf)
     
-diff_gdf = ndiff(gem_20_gdf,gem_21_gdf,"AGS")
+#diff_gdf = ndiff(gem_20_gdf,gem_21_gdf,"AGS")
 diff_gdf = ndiff(gem_20_gdf,gem_21_gdf,"AGS", func = lambda a,b: (b-a)/a if a>0 else 0 if b-a==0 else None)
 diff_gdf.plot("n.all_diff", figsize = (10,10), legend = True)
 diff_gdf["n.all_diff"].hist(range=(-100,100))
