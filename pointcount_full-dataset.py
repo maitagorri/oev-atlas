@@ -17,11 +17,17 @@ import geopandas as gpd
 # Welches Jahr?
 jahr = "2020"
 
-# define the points layers
-out_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/" + jahr + "/"
-pointfiles = {"all":out_path + "nstops.csv",
+# Welche Pfade?
+out_dir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/out/"
+# out_dir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
+geo_path = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
+# geo_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
 
-              "fv":out_path + "fv.nstops.csv"}
+# define the points layers
+out_path = out_dir + jahr + "/"
+pointfiles = {"all":out_path + "210715_nstops.csv",
+
+              "fv":out_path + "210715_fv.nstops.csv"}
 
 ###############
     # shapes
@@ -29,7 +35,6 @@ pointfiles = {"all":out_path + "nstops.csv",
 
 
 # define the area layers
-geo_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
 admin_area_path = geo_path + "vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/"
 shapefiles = {"gem":admin_area_path + "VG250_GEM.shp",
               "kre":admin_area_path + "VG250_KRS.shp",
@@ -47,9 +52,9 @@ def scopeCountsInAreas(countname, ncounts_df, area_gdf):
                                    geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
                                    crs="epsg:4326").to_crs("epsg:4326")
     ## get sum of stuff in each AGS
-    agg_counts_df = gpd.sjoin(area_gdf[["AGS","geometry"]], ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
-                        )[["AGS","n"]
-                        ].groupby("AGS").sum().rename({"n":countname},axis=1
+    agg_counts_df = gpd.sjoin(area_gdf[["AGS","geometry"]], ncounts_gdf[["n_dates","geometry"]], how="left", op="contains" # spatial join
+                        )[["AGS","n_dates"]
+                        ].groupby("AGS").sum().rename({"n_dates":countname},axis=1
                         ) # keep AGS that have counts in them
     return(agg_counts_df)
     
@@ -101,7 +106,7 @@ for level in shapefiles.keys():
     # process
     agg_gdf = aggregateShapes(area_gdf, pointfiles)
     # write out:
-    out_file = level +".stops.4326.geojson"
+    out_file = "210716_"+ level +".stops.4326.geojson"
     agg_gdf.to_file(out_path + out_file, driver="GeoJSON")
     print("Wrote " + out_file)
 
@@ -129,9 +134,8 @@ stopspace = gpd.GeoDataFrame({'geometry':[ncounts_gdf.unary_union.convex_hull]},
         
 
 # iterate little boxes with sidelength sl:                                       
-xmin,ymin,xmax,ymax =  stopspace.total_bounds
+# xmin,ymin,xmax,ymax =  stopspace.total_bounds
 sls = [5, 1] # km 50, 10, 1, 
-#grids = {}
 
 def make_grid(scale, stopspace):   
     # scale is a sidelength in km
@@ -168,10 +172,8 @@ def make_grid(scale, stopspace):
 
 # repeat the above exercise with the grid:
 # get counts of stops in all shapes associated with each AGS
-for scale in sls:
-    grid = gpd.read_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
 
-grid = make_grid(50, stopspace)
+
 def aggregateGrid(grid, pointfiles):
     print("Getting counts for grid with " + str(len(grid)) + " polygons")
 #    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
@@ -185,18 +187,25 @@ def aggregateGrid(grid, pointfiles):
                                        geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
                                        crs="epsg:4326").to_crs("epsg:4326")
         ## get sum of stuff in each AGS
-        agg_counts_gdf = gpd.sjoin(agg_counts_gdf, ncounts_gdf[["n","geometry"]], how="left", op="contains" # spatial join
-                            ).drop("index_right",axis=1).reset_index().dissolve(by="index",aggfunc='sum').rename({"n":"n."+scope},axis=1)
+        agg_counts_gdf = gpd.sjoin(agg_counts_gdf, ncounts_gdf[["n_days","geometry"]], how="left", op="contains" # spatial join
+                            ).drop("index_right",axis=1).reset_index().dissolve(by="index",aggfunc='sum').rename({"n_days":"n."+scope},axis=1)
     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.all']>0]
     return(agg_counts_gdf)
     
     
 for scale in sls:   
+    try:
+        grid = gpd.read_file(out_dir + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
+    except:
+        grid = make_grid(scale, stopspace)
+        grid.to_file(out_dir + str(scale) +"k.grid.3035.geojson",driver="GeoJSON")
+
     agg_counts_gdf = aggregateGrid(
-            make_grid(scale, stopspace.total_bounds).to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON"),
+            grid,
+#            make_grid(scale, stopspace.total_bounds).to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON"),
             pointfiles)
     # write out:
-    out_file = str(scale) +"k.stops.4326.geojson"
+    out_file = "210716_" + str(scale) +"k.stops.4326.geojson"
     print("Writing "+ out_file)
     agg_counts_gdf.to_file(out_path + out_file,driver="GeoJSON")
 
