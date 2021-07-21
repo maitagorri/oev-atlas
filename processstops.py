@@ -11,12 +11,14 @@ import os, re
 import datetime as dt
 
 # Welches Jahr?
-jahr = "2021"
+jahr = "2020"
 
 # define paths
-rawdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/"
+workingdir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/"
+# workingdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/"
+rawdir = workingdir + "raw/"
 rawdatadir = rawdir + "gtfs/" + jahr + "/"
-outdir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"+jahr+"/"
+outdir = workingdir + "out/"+jahr+"/"
 
 
 def getRouteShortNames(scope):
@@ -98,7 +100,7 @@ def interveningWeekdays(start, end, inclusive=True, weekdays=[0, 1, 2, 3, 4]):
                for ref_plus in
                (ref + dt.timedelta(days=weekday) for weekday in weekdays))
 
-def countDaysInInterval(calendarrow):
+def countDaysInIntervalHelper(calendarrow):
     # function to find number of days of service operation based on calendars.txt-entry
     weekdays = calendarrow[0:7].to_numpy().nonzero()[0].tolist()
     startdate = dt.datetime.strptime(str(calendarrow.get("start_date")),"%Y%m%d")
@@ -111,47 +113,102 @@ def addFrequency(stop_times_df,
                  trips_path = rawdatadir + "trips.txt", 
                  calendar_path = rawdatadir + "calendar.txt",
                  calendar_dates_path = rawdatadir + "calendar_dates.txt"):
-    # enriches stop_times DataFrame with information about how often in a year each stop is made
+    # enriches stop_times DataFrame with information about how often in the feed
+    # period each stop is made
     
     print("Getting number of service days for each stop_time")
     # use service_id to find service...
     # get regular service from calendar.txt
+    print("\t...reading regular service calendars")
     calendar_df = pd.read_csv(calendar_path)
-    calendar_df["days_count"] = calendar_df.apply(countDaysInInterval, axis=1)
+    calendar_df["days_count"] = calendar_df.apply(countDaysInIntervalHelper, axis=1)
     # and get exceptions from calendar_dates.txt
+    
+    print("\t...reading calendar exceptions")
     calendar_dates_df = pd.read_csv(calendar_dates_path)
+    print("\t...aggregating calendar")
     calendar_df = calendar_dates_df.groupby(["service_id", "exception_type"], as_index=False
                               ).count(
                             ).pivot(index = "service_id", columns = "exception_type", values = "date"
                             ).reset_index(
                             ).merge(calendar_df, on="service_id", how="right")
+    
+    print("\t...calculating total in calendar")
     calendar_df.days_count= calendar_df.days_count + calendar_df[1].fillna(0) - calendar_df[2].fillna(0)
 
     # use trip_id to look up associated trip
     # from trip, look up service_id
+    print("\t...reading trips")
     trips_df = pd.read_csv(trips_path)
-    return(stop_times_df.merge(trips_df[["trip_id","service_id"]], on = "trip_id", how="left"
-                    ).merge(calendar_df[["service_id", "days_count"]], on = "service_id", how = "left")[["trip_id","stop_id", "days_count"]])
+    print("\t...", len(trips_df))
+    print("\t...merging stop_times with trips")
+    result_df = stop_times_df.merge(trips_df[["trip_id","service_id"]], on = "trip_id", how="left"
+                    )[["trip_id","stop_id", "service_id"]]
+    print("\t...", len(result_df))
     
+    print("\t...merging id'ed stop_times with calendar")
+    result_df = result_df.merge(calendar_df[["service_id", "days_count"]], on = "service_id", how = "left")[["trip_id","stop_id", "days_count"]]
+    print("\t...", len(result_df))
+    print("\t...returning the result")
+    
+    return(result_df)
+
+def addPerDay(counted_df,
+              calendar_path = rawdatadir + "calendar.txt",
+              calendar_dates_path = rawdatadir + "calendar_dates.txt"
+             ):
+    ''' Enriches counted dataframe with average daily count for each stop,
+    using the feed's calendar information to infer the number of days
+    '''
+    
+    print("Adding average daily count to counted df")
+    # read necessary aux files
+    calendar_df = pd.read_csv(calendar_path)
+    calendar_dates_df = pd.read_csv(calendar_dates_path)
+    
+    # calculate
+    startdate =  min(pd.to_datetime(calendar_df.start_date,format="%Y%m%d"))
+    enddate = max(pd.to_datetime(calendar_df.end_date,format="%Y%m%d"))
+    excdates = pd.to_datetime(calendar_dates_df.date,format="%Y%m%d")
+
+    firstdate = min(startdate, min(excdates))
+    lastdate = max(enddate, max(excdates))
+
+    ndays = (lastdate - firstdate).days
+    
+    try:
+        counted_df["n_day"] = counted_df.n / ndays
+    
+    except:
+        print("No count found in df passed to per-day-function")
+        pass
+    
+    return counted_df
+
+        
 # Count and write out all stops per location
 addLocationsToStops(
-        countPerStop(
-                addFrequency(
-                        readStopTimes(rawdatadir)
-                        )
-                )
-        ).to_csv(outdir + "210715_nstops.csv")
+    addPerDay(
+            countPerStop(
+                    addFrequency(
+                            readStopTimes(rawdatadir)
+                            )
+                    )
+            )
+        ).to_csv(outdir + "210720_nstops.csv")
 
 # Count and write out only FV-stops per location
 addLocationsToStops(
-        countPerStop(
+        addPerDay(
+            countPerStop(
                 addFrequency(
                     filterByRoute(
                             readStopTimes(rawdatadir), 
                             getRouteShortNames("fv"))
                     )
                 )
-        ).to_csv(outdir + "210715_fv.nstops.csv")
+            )
+        ).to_csv(outdir + "210720_fv.nstops.csv")
 
 #outfiles = {"fv":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/fv.nstops.csv",
 #          "rs":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/rs.nstops.csv",
