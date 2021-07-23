@@ -48,7 +48,9 @@ np.std(diff_gdf["n.all_diff"])
 np.median(diff_gdf["n.all_diff"])
 diff_gdf["n.all_diff"].describe()
 
-diff_gdf.merge(gem_20_gdf, on="AGS").loc[np.abs(diff_gdf["n.all_diff"])>10,["Raumeinheit", "n.all","n.all_diff"]]
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+#    print(diff_gdf[["n.all_diff","AGS"]].merge(gem_20_gdf, on="AGS").loc[np.abs(diff_gdf["n.all_diff"]>10),["Raumeinheit", "n.all","n.all_diff"]].sort_values("n.all_diff"))
+    print(diff_gdf[["n.all_diff","AGS","GEN"]].merge(gem_20_gdf, on="AGS").loc[np.abs(diff_gdf["GEN"]=="Olpe"),["Raumeinheit", "n.all","n.all_diff"]].sort_values("n.all_diff"))
 
 (df1["n.all"]-df2["n.all"])/df1['n.all']
 

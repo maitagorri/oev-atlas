@@ -15,7 +15,7 @@ import pandas as pd
 import geopandas as gpd
 
 # Welches Jahr?
-jahr = "2020"
+jahr = "2021"
 
 # Welche Pfade?
 out_dir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/out/"
