@@ -102,12 +102,12 @@ def interveningWeekdays(start, end, inclusive=True, weekdays=[0, 1, 2, 3, 4]):
 
 def countDaysInIntervalHelper(calendarrow):
     # function to find number of days of service operation based on calendars.txt-entry
-    weekdays = calendarrow[0:7].to_numpy().nonzero()[0].tolist()
+    servicedays = calendarrow[0:7].to_numpy().nonzero()[0].tolist()
     startdate = dt.datetime.strptime(str(calendarrow.get("start_date")),"%Y%m%d")
     enddate = dt.datetime.strptime(str(calendarrow.get("end_date")),"%Y%m%d")
 #    if enddate < startdate:
 #        print("switched start and end at ", calendarrow.get("service_id"))
-    return(interveningWeekdays(startdate, enddate, weekdays = weekdays))
+    return(interveningWeekdays(startdate, enddate, weekdays = servicedays))
     
 def addFrequency(stop_times_df, 
                  trips_path = rawdatadir + "trips.txt", 
@@ -148,6 +148,99 @@ def addFrequency(stop_times_df,
     
     print("\t...merging id'ed stop_times with calendar")
     result_df = result_df.merge(calendar_df[["service_id", "days_count"]], on = "service_id", how = "left")[["trip_id","stop_id", "days_count"]]
+    print("\t...", len(result_df))
+    print("\t...returning the result")
+    
+    return(result_df)
+
+def addFrequency2(stop_times_df, 
+                 trips_path = rawdatadir + "trips.txt", 
+                 calendar_path = rawdatadir + "calendar.txt",
+                 calendar_dates_path = rawdatadir + "calendar_dates.txt"):
+    # enriches stop_times DataFrame with information about how often in the feed
+    # period each stop is made
+    
+    # some helper functions
+    def serviceToDatesHelper(r): 
+        '''Helper function that returns a list of date strings, given a calendar row
+            with weekdays, start and end dates
+        '''
+        # day suffixes to be able to use pd.date_range to get a list of dates
+        day_suff = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
+        # get relevant information from the row
+        weekdays = [i for i,v in enumerate(r[0:7]) if v!=0]
+        start = dt.datetime.strptime(str(r.start_date),"%Y%m%d").date()
+        end = dt.datetime.strptime(str(r.end_date),"%Y%m%d").date()
+
+        # generate the date strings
+        active_dates = [
+            i for l in [
+                # get a date range of all dates...
+                pd.date_range(start=start,end=end,freq="W-"+day_suff[d]
+                              # ...for each weekday contained in service
+                          ).strftime("%Y%m%d") for d in weekdays
+                ] for i in l] #flatten this list situation
+
+        return(active_dates)
+
+    def serviceToExcHelperLoopy(r):
+        '''Same as above, but not returning a dataframe, rather two same-length lists
+            (exc-type can be added later, since it is always 1)
+        '''
+        active_dates = serviceToDatesHelper(r)
+        service_id = [r["service_id"]]*len(active_dates)
+
+        return(service_id, active_dates)
+    
+    def calendarToDates(df):
+        '''Takes a calendar.txt-df and returns a calendar_dates.txt-style df'''
+        ids, dates = [], []
+        for _, row in df.iterrows():
+            i, d = serviceToExcHelperLoopy(row)
+            ids += i
+            dates += d
+
+        df_out = pd.DataFrame({'service_id': ids,
+                              'exception_type': [1] * len(ids),
+                              'date': dates})
+        df_out.date = df_out.date.astype(int)
+        return(df_out)
+    
+    print("Getting number of service days for each stop_time")
+    # use service_id to find service...
+    # get regular service from calendar.txt
+    print("\t...reading regular service calendars")
+    calendar_df = pd.read_csv(calendar_path)
+    # and get exceptions from calendar_dates.txt
+    print("\t...reading calendar exceptions")
+    calendar_dates_df = pd.read_csv(calendar_dates_path)
+    print("\t...aggregating calendar")
+    # convert calendar to dates format
+    calendar_as_dates_df = calendarToDates(calendar_df)
+    # join exceptions with regular dates
+    all_dates_df = calendar_as_dates_df.merge(calendar_dates_df, on=["service_id",'date'], how='outer')
+    # pick out dates that have service and were not canceled, or were added
+    service_dates_df = all_dates_df[((all_dates_df.exception_type_x==1) & (all_dates_df.exception_type_y!=2)) | # regular trips
+                               ((all_dates_df.exception_type_x!=1) & (all_dates_df.exception_type_y==1))   # exceptional additions
+                   ]    
+    print("\t...calculating total in calendar")
+    daycounts_df = service_dates_df.groupby("service_id",as_index=False
+                                           ).sum(
+                                           ).rename({"exception_type_x":"days_count"},axis=1
+                                           )[["service_id","days_count"]]
+
+    # use trip_id to look up associated trip
+    # from trip, look up service_id
+    print("\t...reading trips")
+    trips_df = pd.read_csv(trips_path)
+    print("\t...", len(trips_df))
+    print("\t...merging stop_times with trips")
+    result_df = stop_times_df.merge(trips_df[["trip_id","service_id"]], on = "trip_id", how="left"
+                    )[["trip_id","stop_id", "service_id"]]
+    print("\t...", len(result_df))
+    
+    print("\t...merging id'ed stop_times with calendar")
+    result_df = result_df.merge(daycounts_df, on = "service_id", how = "left")[["trip_id","stop_id", "days_count"]]
     print("\t...", len(result_df))
     print("\t...returning the result")
     
