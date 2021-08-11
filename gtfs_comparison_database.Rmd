@@ -1,0 +1,272 @@
+---
+title: "Comparison 2020-2021--TidyTransit"
+output: html_notebook
+---
+
+```{r}
+# install.packages("tidytransit")
+library(tidytransit)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+## Create GTFS database
+Function to read GTFS and create SQLite.
+Dates are read as dates and coerced to Julian with start date "1970-01-01"
+Times are read as times and coerced to counts of seconds
+```{r}
+gtfsToSqlite <- function(gtfs.path, db.path){
+  require(readr)
+  require(stringr)
+  if (file.exists(db.path)) file.remove(db.path)    # make sure db isn't there already
+  db <- DBI::dbConnect(RSQLite::SQLite(), db.path)  # open up database
+  
+  for (filename in list.files(gtfs.path, pattern = "^[^0-9]+.txt")){
+    name =  str_extract(filename,"^([^\\.]+)")
+    print(name)
+    f <- function(df, pos){           # pos is just a placeholder, don't use
+      df <- df %>% mutate(across(contains("_id"), ~ str_pad(as.character(.x),
+                                                             width = max(nchar(.x)),
+                                                             side = "left",
+                                                             pad = "0")))
+      DBI::dbWriteTable(conn = db,
+                        name = name,
+                        value = df,
+                        append = T)}  # function to callback on each chunk, and append
+    read_csv_chunked(file.path(gtfs.path, filename),     # go through csv and append to db
+                     col_types = list(date = "c", # col_date(format = "%Y%m%d"),
+                                       start_date = "c", # col_date(format = "%Y%m%d"),
+                                       end_date = "c", # col_date(format = "%Y%m%d")
+                                       arrival_time = "c",
+                                       departure_time = "c"
+                                      ),
+                     SideEffectChunkCallback$new(f),
+                     progress = T
+                            )
+  }
+    
+  DBI::dbDisconnect(db)
+}
+```
+
+Testing the reading and writing
+```{r}
+library(readr)
+df <- read_csv("/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/gtfs/2020/stop_times.txt",
+         n_max = 10000,
+                col_types = list(date = col_date(format = "%Y%m%d"),
+                                 start_date = col_date(format = "%Y%m%d"),
+                                 end_date = col_date(format = "%Y%m%d"),
+                                 arrival_time = "c",
+                                 departure_time = "c"
+                                 )
+         )
+# db.path <- "../out/2021/gtfs_2020.sqlite"
+# db <- DBI::dbConnect(RSQLite::SQLite(), db.path)
+# 
+# DBI::dbWriteTable(conn = db,
+#                   name = "stop_times",
+#                   value = df,
+#                   append = F)
+
+```
+```{r}
+df %>%
+  mutate(across(contains("_id"), ~ stringr::str_pad(as.character(.x), 
+                                       width = max(nchar(.x)), 
+                                       side = "left", 
+                                       pad = "0")))
+
+                ~ max(nchar(.x))))#as.character(.x)))
+```
+
+```{r}
+class(df$departure_time)
+tbl(db, "stop_times") %>% select(departure_time)
+
+```
+
+Shorthand with file paths automatically constructed
+```{r}
+gtfsToSqliteShortcut <- function(year){
+  year <- as.character(year)
+  in.path = file.path("/home","maita","Nextcloud","Documents","Work","Gap_Map","raw","gtfs",year)
+  out.path = file.path("/home","maita","Nextcloud","Documents","Work","Gap_Map","out",year,paste0("gtfs_",year,".sqlite"))
+  print(in.path)
+  print(out.path)
+  gtfsToSqlite(in.path, out.path)
+}
+```
+
+
+Do this for 2020 and 2021o
+```{r}
+gtfsToSqliteShortcut(2020)
+gtfsToSqliteShortcut(2021)
+```
+
+
+
+
+### Checking Samantha's hypothesis
+
+- Identify `stop_times` with `service_id` through `trips`
+- ID by `service_id` and `trip_id`, spread sequence of arrivals and departures
+- Group by `service_id`, and all `arrival_time`s and `departure_time`s and `stop_id`s for sequence ID
+- Check how many of the groups contain more than one element (i.e. are duplicate sequences)
+
+```{r}
+db.path <- "../out/2020/gtfs_2020.sqlite"
+db20 <- DBI::dbConnect(RSQLite::SQLite(), db.path)
+
+stop.times <- tbl(db20, "stop_times")
+# stop.times <- tbl(db20, "stop_times") %>% head(n=50)
+trips <- tbl(db20, "trips")
+# standardLengthSqlQuery <- function(var){
+#   paste("SUBSTR('0000000' || CAST(CAST(",
+#                  var, 
+#                  "as INT) as VARCHAR), -MAX(LENGTH(",
+#                  var,
+#                  ")), MAX(LENGTH(",
+#                  var,
+#                  ")))")
+#   }
+
+# 
+# trips %>%
+#   mutate(trip_id = sql(standardLengthSqlQuery("trip_id")))
+
+trips %>% 
+  select(trip_id, service_id) %>%
+  # right_join(head(stop.times, n=50), by = "trip_id") %>%
+  right_join(stop.times, by = "trip_id") %>%
+  select(trip_id, service_id, stop_sequence, stop_id, arrival_time, departure_time) %>%
+  mutate(space_time = paste0(stop_id, arrival_time,departure_time)) %>%
+  pivot_wider(id_cols = c(trip_id, service_id), names_from = stop_sequence, values_from = space_time) %>%
+  group_by(service_id, across(matches("\\d"))) %>%
+  summarize(seq_count = n_distinct(trip_id)) %>%
+  group_by(seq_count) %>%
+  summarize(freq = n()) %>%
+  collect() -> seq.dupe.count.20
+```
+
+
+```{r}
+db.path <- "../out/2021/gtfs_2021.sqlite"
+db21 <- DBI::dbConnect(RSQLite::SQLite(), db.path)
+stop.times <- tbl(db21, "stop_times")
+# stop.times <- head(tbl(db21, "stop_times"), n=50)
+trips <- tbl(db21, "trips")
+
+trips %>% 
+  select(trip_id, service_id) %>%
+  # right_join(head(stop.times, n=50), by = "trip_id") %>%
+  right_join(stop.times, by = "trip_id") %>%
+  select(trip_id, service_id, stop_sequence, stop_id, arrival_time, departure_time) %>%
+  mutate(space_time = paste0(stop_id, arrival_time,departure_time)) %>%
+  pivot_wider(id_cols = c(trip_id, service_id), names_from = stop_sequence, values_from = space_time) %>%
+  group_by(service_id, across(matches("\\d"))) %>%
+  summarize(seq_count = n_distinct(trip_id)) %>%
+  group_by(seq_count) %>%
+  summarize(freq = n()) %>%
+  collect() -> seq.dupe.count.21
+
+
+```
+Okay, so what does this mean--how many trips are due to duplicates?
+```{r}
+seq.dupe.count <- seq.dupe.count.21
+
+dupePerc <- function(seq.dupe.count){
+  nseq <- sum(seq.dupe.count$freq)
+  seq.dupe.count %>%
+    mutate(n_dupes = (seq_count-1) * freq) %>%
+    summarize(n = sum(n_dupes)) %>%
+    pull(n) -> ndup
+  print(ndup)
+  print(nseq)
+  print(ndup/nseq)
+  return(ndup/nseq)
+}
+  
+dupePerc(seq.dupe.count.20)
+dupePerc(seq.dupe.count.21)
+```
+
+
+
+Does each trip just have one sequence?
+```{r}
+suspicious.stop_times %>% 
+  group_by(trip_id) %>%
+  dplyr::count(stop_sequence) %>%
+  pull(n) %>%
+  max
+```
+Yes! Great.
+
+Now, are any of these trips running at exactly the same stop_times?
+
+```{r}
+suspicious.stop_times %>%
+  # head %>%
+  unite("sequence", arrival_time, departure_time, stop_id) %>%
+  select(trip_id, stop_sequence, sequence) %>%
+  tidyr::pivot_wider(id_cols = trip_id, names_from = stop_sequence, values_from = sequence) %>%
+  unite("sequence", matches("\\d+"), na.rm = T) ->
+  suspicious.sequences
+```
+```{r}
+suspicious.sequences %>%
+  filter(sequence %in% suspicious.sequences$sequence[duplicated(suspicious.sequences$sequence)]) %>%
+  arrange(sequence)
+```
+What percentage of trips is this? Tiny.
+```{r}
+826/nrow(suspicious_trips)
+```
+We could actually try this for all stop_times--to see if there are trip_ids that run on the exact same schedule. But we'd have to sort them by service_id.
+Reading in just here, to keep it lighter:
+```{r}
+trips = data.table::fread("/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/gtfs/2021/trips.txt")
+```
+```{r}
+# install.packages("sqldf")
+for (s in unique(trips$service_id)){
+  ts <- trips$trip_id[ trips$service_id == s]
+  sts <- sqldf::read.csv.sql("/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/gtfs/2021/trips.txt",
+                             paste0("SELECT * FROM file WHERE trip_id IN ('",paste(ts, collapse = "', '"), "')")
+  )
+}
+
+paste0("SELECT * FROM file WHERE trip_id IN ('",paste(ts, collapse = "', '"), "')")
+```
+
+```{r}
+gtfs$`2021`$stop_times %>%
+  merge(gtfs$`2021`$trips[c("service_id","trip_id")], by = "trip_id") %>%     # add on service_id
+  mutate(service_id = stringr::str_pad(service_id, 
+                                       width = 5, 
+                                       side = "left", 
+                                       pad = "0"),
+         stop_id = stringr::str_pad(stop_id, 
+                                       width = 6, 
+                                       side = "left", 
+                                       pad = "0")) %>%                        # padding stop_id
+  unite("sequence", arrival_time, departure_time, stop_id, sep = "") %>%
+  select(trip_id, stop_sequence, service_id, sequence) %>%
+  tidyr::pivot_wider(id_cols = c(trip_id, service_id), names_from = stop_sequence, values_from = sequence) %>%
+  unite("sequence", service_id, matches("\\d+"), na.rm = T, sep = "") ->
+  trip.sequences
+```
+```{r}
+nrow(gtfs$`2021`$trips)
+nrow(gtfs$`2020`$trips)
+```
+
+
+
+```{r}
+max(sapply(gtfs$`2021`$stop_times$stop_id, nchar))
+```
+
