@@ -13,9 +13,12 @@ geographies.
 
 import pandas as pd
 import geopandas as gpd
+import sys
+
 
 # Welches Jahr?
-jahr = "2021"
+# jahr = "2020"
+jahr = sys.argv[1]
 
 # Welche Pfade?
 out_dir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/out/"
@@ -25,9 +28,11 @@ geo_path = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
 
 # define the points layers
 out_path = out_dir + jahr + "/"
-pointfiles = {"all":out_path + "210720_nstops.csv",
+# zipname = "2020"
+zipname = sys.argv[2]
+pointfiles = {"all":out_path + zipname + ".nstops.csv",
 
-              "fv":out_path + "210720_fv.nstops.csv"}
+              "fv":out_path + zipname + "fv.nstops.csv"}
 
 ###############
     # shapes
@@ -106,7 +111,7 @@ for level in shapefiles.keys():
     # process
     agg_gdf = aggregateShapes(area_gdf, pointfiles)
     # write out:
-    out_file = "210721_"+ level +".stops.4326.geojson"
+    out_file = zipname + "_" + level +".stops.4326.geojson"
     agg_gdf.to_file(out_path + out_file, driver="GeoJSON")
     print("Wrote " + out_file)
 
@@ -205,7 +210,7 @@ for scale in sls:
 #            make_grid(scale, stopspace.total_bounds).to_file(out_path + str(scale) +"k.grid.3035.geojson",driver="GeoJSON"),
             pointfiles)
     # write out:
-    out_file = "210721_" + str(scale) +"k.stops.4326.geojson"
+    out_file = zipname + "_" + str(scale) +"k.stops.4326.geojson"
     print("Writing "+ out_file)
     agg_counts_gdf.to_file(out_path + out_file,driver="GeoJSON")
 
