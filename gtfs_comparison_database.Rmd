@@ -114,10 +114,19 @@ gtfsToSqliteShortcut(2021)
 - ID by `service_id` and `trip_id`, spread sequence of arrivals and departures
 - Group by `service_id`, and all `arrival_time`s and `departure_time`s and `stop_id`s for sequence ID
 - Check how many of the groups contain more than one element (i.e. are duplicate sequences)
-
 ```{r}
+
 db.path <- "../out/2020/gtfs_2020.sqlite"
 db20 <- DBI::dbConnect(RSQLite::SQLite(), db.path)
+
+
+db.path <- "../out/2021/gtfs_2021.sqlite"
+db21 <- DBI::dbConnect(RSQLite::SQLite(), db.path)
+```
+
+
+
+```{r}
 
 stop.times <- tbl(db20, "stop_times")
 # stop.times <- tbl(db20, "stop_times") %>% head(n=50)
@@ -152,8 +161,6 @@ trips %>%
 
 
 ```{r}
-db.path <- "../out/2021/gtfs_2021.sqlite"
-db21 <- DBI::dbConnect(RSQLite::SQLite(), db.path)
 stop.times <- tbl(db21, "stop_times")
 # stop.times <- head(tbl(db21, "stop_times"), n=50)
 trips <- tbl(db21, "trips")
@@ -191,6 +198,63 @@ dupePerc <- function(seq.dupe.count){
   
 dupePerc(seq.dupe.count.20)
 dupePerc(seq.dupe.count.21)
+```
+## What about some missing things?
+```{r}
+tbl(db20, "agency") %>% 
+  filter(agency_name=="Vetter GmbH") %>% 
+  left_join(tbl(db20, "routes"), by="agency_id") %>%
+  distinct(route_id) %>%
+  left_join(tbl(db20, "trips"), by="route_id") %>%
+  distinct(trip_id) %>%
+  left_join(tbl(db20, "stop_times"), by="trip_id") %>%
+  distinct(stop_id) %>%
+  left_join(tbl(db20, "stops"), by="stop_id") %>%
+  collect() -> vetter.stops.20
+
+vetter.stops.20 %>% write.csv("../out/vetter_stops_20.csv")
+```
+```{r}
+tbl(db21, "agency") %>% 
+  filter(agency_name=="Vetter GmbH") %>% 
+  left_join(tbl(db21, "routes"), by="agency_id") %>%
+  distinct(route_id) %>%
+  left_join(tbl(db21, "trips"), by="route_id") %>%
+  distinct(trip_id) %>%
+  left_join(tbl(db21, "stop_times"), by="trip_id") %>%
+  distinct(stop_id) %>%
+  left_join(tbl(db21, "stops"), by="stop_id") %>%
+  collect() -> vetter.stops.21
+
+vetter.stops.21 %>% write.csv("../out/vetter_stops_21.csv")
+```
+
+
+```{r}
+library(sf)
+library(plotly)
+vetter.stops.20 <- read.csv("../out/vetter_stops_20.csv")
+vetter.stops.21 <- read.csv("../out/vetter_stops_21.csv")
+
+vetter.stops.20  <- 
+  vetter.stops.20 %>%
+  filter(!is.na(stop_lat)) %>%
+  st_as_sf(coords = c( "stop_lon", "stop_lat"), crs = 4326)
+
+vetter.stops.21 <- 
+  vetter.stops.21 %>%
+  filter(!is.na(stop_lat)) %>%
+  st_as_sf(coords = c("stop_lon", "stop_lat"), crs = 4326)
+
+kreise <- st_read("/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/geo/vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/VG250_KRS.shp") %>% st_transform(crs = 4326)
+
+(kreise %>%
+  ggplot() +
+  geom_sf_label(aes(label = GEN)) +
+  geom_sf(data = rbind(mutate(vetter.stops.20, color = "20"), mutate(vetter.stops.21, color = "21")), aes(color = color)) 
+    ) %>%
+  ggplotly()
+
 ```
 
 
