@@ -11,7 +11,7 @@ import os, re
 import datetime as dt
 
 # Welches Jahr?
-jahr = "2020"
+jahr = "2021"
 
 # define paths
 workingdir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/"
@@ -102,7 +102,7 @@ def interveningWeekdays(start, end, inclusive=True, weekdays=[0, 1, 2, 3, 4]):
 
 def countDaysInIntervalHelper(calendarrow):
     # function to find number of days of service operation based on calendars.txt-entry
-    servicedays = calendarrow[0:7].to_numpy().nonzero()[0].tolist()
+    servicedays = calendarrow[1:8].to_numpy().nonzero()[0].tolist()
     startdate = dt.datetime.strptime(str(calendarrow.get("start_date")),"%Y%m%d")
     enddate = dt.datetime.strptime(str(calendarrow.get("end_date")),"%Y%m%d")
 #    if enddate < startdate:
@@ -288,7 +288,7 @@ addLocationsToStops(
                             )
                     )
             )
-        ).to_csv(outdir + "210720_nstops.csv")
+        ).to_csv(outdir + "210812_nstops_2.csv")
 
 # Count and write out only FV-stops per location
 addLocationsToStops(
@@ -301,7 +301,7 @@ addLocationsToStops(
                     )
                 )
             )
-        ).to_csv(outdir + "210720_fv.nstops.csv")
+        ).to_csv(outdir + "210812_fv.nstops_2.csv")
 
 #outfiles = {"fv":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/fv.nstops.csv",
 #          "rs":"/home/maita/Nextcloud/Documents/Work/Gap_Map/out/rs.nstops.csv",
