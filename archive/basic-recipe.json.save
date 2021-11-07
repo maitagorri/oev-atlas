@@ -1,0 +1,10 @@
+{
+"version": 1,
+"layers": {
+"
+"source": "mapbox://tileset-source/maitagorri/freq-ewz-kreis",
+"minzoom": 0,
+"maxzoom": 7
+}
+}
+}

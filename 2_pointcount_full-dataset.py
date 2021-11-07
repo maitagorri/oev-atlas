@@ -17,23 +17,22 @@ import sys
 
 
 # Welches Jahr?
-jahr = "delfi"
-# jahr = sys.argv[1]
+# jahr = "2020"
+jahr = sys.argv[1]
 
 # Welche Pfade?
-out_dir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/"
+out_dir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/out/"
 # out_dir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
-geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
+geo_path = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
 # geo_path = "/home/maita/Nextcloud/Documents/Work/Gap_Map/raw/geo/"
 
 # define the points layers
 out_path = out_dir + jahr + "/"
-zipname = "20211015_fahrplaene_gesamtdeutschland_gtfs"
-# zipname = sys.argv[2]
-pointfiles = {"all":out_path + zipname + ".nstops.csv" #,
+# zipname = "2020"
+zipname = sys.argv[2]
+pointfiles = {"all":out_path + zipname + ".nstops.csv",
 
-#               "fv":out_path + zipname + "fv.nstops.csv"
-             }
+              "fv":out_path + zipname + "fv.nstops.csv"}
 
 ###############
     # shapes
@@ -105,9 +104,7 @@ def aggregateShapes(area_gdf, pointfiles):
     # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
     return(agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']])
 
-
 for level in shapefiles.keys():
-#     level = "lan"
     area_path = shapefiles[level]
     # Read in admin areas
     area_gdf = gpd.read_file(area_path)

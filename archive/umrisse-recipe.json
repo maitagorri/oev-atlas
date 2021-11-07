@@ -1,0 +1,20 @@
+{
+"version": 1,
+"layers": {
+    "land": {
+        "source": "mapbox://tileset-source/maitagorri/freq-land",
+        "minzoom": 3,
+        "maxzoom": 5
+    },
+    "kreis": {
+        "source": "mapbox://tileset-source/maitagorri/freq-kreis",
+        "minzoom": 6,
+        "maxzoom": 8
+    },
+    "gemeinde": {
+        "source": "mapbox://tileset-source/maitagorri/freq-gemeinde",
+        "minzoom": 9,
+        "maxzoom": 12
+}
+}
+}
