@@ -28,12 +28,20 @@ geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
 
 # define the points layers
 out_path = out_dir + jahr + "/"
-zipname = "20211015_fahrplaene_gesamtdeutschland_gtfs"
+zipname = "delfi-brosi-test"
 # zipname = sys.argv[2]
-pointfiles = {"all":out_path + zipname + ".nstops.csv" #,
+pointfiles = {"nah":"/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
 
-#               "fv":out_path + zipname + "fv.nstops.csv"
-             }
+              "fv":"/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"}
+
+
+###############
+    # aggregate the pointfiles for "all"
+###############
+pd.concat([pd.read_csv(pointfile) for pointfile in pointfiles.values()]
+         ).to_csv(out_dir + "tmp_allstops.csv")
+pointfiles["all"] = out_dir + "tmp_allstops.csv"
+del pointfiles['nah']
 
 ###############
     # shapes
