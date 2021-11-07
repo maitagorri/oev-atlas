@@ -16,18 +16,18 @@ import zipfile
 
 
 # Welches Jahr?
-jahr = "2020"
+jahr = "2021"
 # Welcher Zip?
-zipname = "2020_reissue_2"
-# Welche Routenreferenz? (im raw-directory)
-routescope = "fv"
+zipname = "20211015_fahrplaene_gesamtdeutschland_gtfs"
+# # Welche Routenreferenz? (im raw-directory)
+routescope = ""
 
 
 # In[3]:
 
 
 # define paths
-workingdir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/"
+workingdir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/"
 #storagedir = "smb://192.168.90.30/allmende%20verkehr/4%20Projekte/2%20Projekte%20Mobilitätswende/ÖV-Deutschlandkarte%20(Gap-Map)/Berechnungen/raw/gtfs/"
 
 
@@ -37,8 +37,8 @@ workingdir = "/mnt/c/Users/maita.schade/Nextcloud/Documents/Work/Gap_Map/"
 # constructed paths
 # rawdir = workingdir + "raw/"
 rawdir = workingdir + "raw/"
-rawdatadir = rawdir + "gtfs/" + jahr + "/"
-outdir = workingdir + "out/"+jahr+"/"
+rawdatadir = rawdir + "gtfs/" + 'delfi/'# + jahr + "/"
+outdir = workingdir + "out/" + 'delfi/'# + jahr + "/"
 #inpath = "{0}{1}_{2}.db".format(rawdatadir,jahr,datum)
 zippath = rawdatadir + zipname + ".zip"
 
@@ -55,43 +55,43 @@ zf = zipfile.ZipFile(zippath) # this is the raw stuff
 # In[8]:
 
 
-def getRouteShortNames(scope):
-    # Relying on pre-separated routes file in raw directory
-    # takes scope prefix and gets short_names to filter for
-    # !!! This only works for Fernverkehr!!!
-    print("Scope for routes: "+ scope)
-    routespath = [s for s in os.listdir(rawdatadir) if re.search("routes_"+scope, s) ][0]
-    print("Reading good routes from " + routespath)
-    scope_routes_df = pd.read_csv(rawdatadir + routespath)
-    routenames = scope_routes_df.route_short_name.unique()
-#    routeids = routes_df.route_id.unique()
-    return(routenames)
+# def getRouteShortNames(scope):
+#     # Relying on pre-separated routes file in raw directory
+#     # takes scope prefix and gets short_names to filter for
+#     # !!! This only works for Fernverkehr!!!
+#     print("Scope for routes: "+ scope)
+#     routespath = [s for s in os.listdir(rawdatadir) if re.search("routes_"+scope, s) ][0]
+#     print("Reading good routes from " + routespath)
+#     scope_routes_df = pd.read_csv(rawdatadir + routespath)
+#     routenames = scope_routes_df.route_short_name.unique()
+# #    routeids = routes_df.route_id.unique()
+#     return(routenames)
 
 
 # In[9]:
 
 
-def filterByRoute(trips_df, scope = routescope, zf = zf):
-    # Given a list of route_short_names included in scope
-    # relying on or taking routes and trips in rawdatadir
-    # takes stop_times and filters them to include only stops made on routes included in scope
-    if scope != "":
-        routenames = getRouteShortNames(scope)
-        print("Filtering routes...")
-        routes_df = pd.read_csv(zf.open("routes.txt"), usecols = ["route_short_name", "route_id"])
+# def filterByRoute(trips_df, scope = routescope, zf = zf):
+#     # Given a list of route_short_names included in scope
+#     # relying on or taking routes and trips in rawdatadir
+#     # takes stop_times and filters them to include only stops made on routes included in scope
+#     if scope != "":
+#         routenames = getRouteShortNames(scope)
+#         print("Filtering routes...")
+#         routes_df = pd.read_csv(zf.open("routes.txt"), usecols = ["route_short_name", "route_id"])
 
-        trips_df_filtered = trips_df.merge(
-            routes_df[routes_df["route_short_name"].isin(routenames)], # which routes are ok?
-            how="right",
-            on ="route_id"
-        ) # which trips are on those routes?
-#         print("length now: ", len(trips_df_filtered))
-    else:
-        print("Not filtering routes...")
-        trips_df_filtered = trips_df
-    print("Total trips: ", len(trips_df_filtered))
+#         trips_df_filtered = trips_df.merge(
+#             routes_df[routes_df["route_short_name"].isin(routenames)], # which routes are ok?
+#             how="right",
+#             on ="route_id"
+#         ) # which trips are on those routes?
+# #         print("length now: ", len(trips_df_filtered))
+#     else:
+#         print("Not filtering routes...")
+#         trips_df_filtered = trips_df
+#     print("Total trips: ", len(trips_df_filtered))
         
-    return(trips_df_filtered[["trip_id","service_id"]])
+#     return(trips_df_filtered[["trip_id","service_id"]])
 
 
 # ### Generate counts for `service_id`s
@@ -153,6 +153,10 @@ def countDaysInIntervalHelper(calendarrow):
 #        print("switched start and end at ", calendarrow.get("service_id"))
     return(interveningWeekdays(startdate, enddate, weekdays = servicedays))
 
+### Helper function to compare dates
+def isInIntervalHelper(n, interval):
+    '''works only on ARRAY-like n'''
+    return(np.where((n <= max(interval)) & (n >= min(interval)), True, False))
 
 # In[11]:
 
@@ -355,8 +359,8 @@ ndays = getFeedDays(zf)
 
 
 
-process("fv", ndays)
-# process("", ndays)
+# process("fv", ndays)
+process("", ndays)
 
 
 # In[21]:
