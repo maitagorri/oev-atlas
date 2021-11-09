@@ -13,12 +13,6 @@ geographies.
 
 import pandas as pd
 import geopandas as gpd
-import sys
-
-
-# Welches Jahr?
-# jahr = "delfi"
-# jahr = sys.argv[1]
 
 # Welche Pfade?
 # out_dir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/"
@@ -37,20 +31,9 @@ pointfiles = {"nv": out_dir + "Delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.
               #"/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
              }
 
-
 ###############
-    # aggregate the pointfiles for "all"
-    # actually no, for now let's just do nah und fern seperately
+    # areas
 ###############
-# pd.concat([pd.read_csv(pointfile) for pointfile in pointfiles.values()]
-#          ).to_csv(out_dir + "tmp_allstops.csv")
-# pointfiles["all"] = out_dir + "tmp_allstops.csv"
-# del pointfiles['nah']
-
-###############
-    # shapes
-###############
-
 
 # define the area layers
 admin_area_path = geo_path + "vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/"
@@ -217,7 +200,7 @@ def aggregateGrid(grid_gdf, ncounts_gdf, scope):
                        ).reset_index(
                        ).dissolve(by="index",aggfunc='sum'
                        ).rename({"n_day":"n."+scope},axis=1)
-    agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].set_index('geometry')
+    agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].drop(columns='geometry')
         # reset index to geometry for easier joining of different counts across grid later
     return(agg_counts_gdf)
     
@@ -241,16 +224,16 @@ points = {k:pointfileReader(pointfiles[k], germany) for k in pointfiles}
 
 # For each scale, aggregate all the different count files across grid, then concatenate
 countgrids = { 
-    scale:gpd.GeoDataFrame( # turning the whole thing into a gdf again
-                pd.concat(  # concatenating the different scope counts of one grid
-                    [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
-                                   points[scope], 
-                                   scope) 
-                     for scope in pointfiles      # for all scopes/different input count files
-                    ]
-                ).reset_index()                   # getting the geometry column back as geometry column
-            ).set_crs("epsg:4326")                # making sure the result has the correct crs
-        for scale in sls                          # for all different grid scales
+    scale:pd.concat(                  # concatenating the different scope counts of one grid
+        [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
+                       points[scope], 
+                       scope) 
+         for scope in pointfiles      # for all scopes/different input count files
+        ],
+        axis=1
+    ).join(grids[scale]               # getting the geometry column back 
+    )
+    for scale in sls                  # for all different grid scales
 }
 
 # check count consistency
