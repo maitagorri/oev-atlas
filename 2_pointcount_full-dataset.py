@@ -15,20 +15,20 @@ import pandas as pd
 import geopandas as gpd
 
 # Welche Pfade?
-# out_dir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/"
-out_dir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
-# geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
-geo_path = "/home/maita/VW_Data_Hub/Gap_Map/raw/geo/"
+out_dir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/"
+# out_dir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
+geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
+# geo_path = "/home/maita/VW_Data_Hub/Gap_Map/raw/geo/"
 
 # define the points layers
 # out_path = out_dir + jahr + "/"
 zipname = "delfi-brosi-2021"
 # zipname = sys.argv[2]
-pointfiles = {"nv": out_dir + "Delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
-              #"/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+pointfiles = {"nv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+              # out_dir + "Delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
 
-              "fv": out_dir + "Brosi/2021/2021_reissue_2fv.nstops.csv"
-              #"/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
+              "fv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
+              #out_dir + "Brosi/2021/2021_reissue_2fv.nstops.csv"
              }
 
 ###############
