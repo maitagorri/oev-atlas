@@ -22,7 +22,7 @@ geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
 
 # define the points layers
 # out_path = out_dir + jahr + "/"
-zipname = "delfi-brosi-2021"
+zipname = "delfi-brosi-20211015"
 # zipname = sys.argv[2]
 pointfiles = {"nv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
               # out_dir + "Delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
@@ -106,6 +106,8 @@ def aggregateShapes(area_gdf, pointfiles):
         agg_sfl_gdf['n.'+scope+'.ewz'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['EWZ']
         agg_sfl_gdf['n.'+scope+'.kfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['KFL']
         agg_sfl_gdf['n.'+scope+'.sfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['SFL']
+    # add across all scopes
+    agg_sfl_gdf['n.ges.sfl'] = agg_sfl_gdf[['n.'+scope+'.sfl' for scope in pointfiles.keys()]].sum(axis=1)
     # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
     return(agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']])
 
@@ -235,6 +237,10 @@ countgrids = {
     )
     for scale in sls                  # for all different grid scales
 }
+
+# Add total count to each grid
+for scale in countgrids:
+    countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
 
 # check count consistency
 for scope in pointfiles:
