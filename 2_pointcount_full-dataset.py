@@ -22,9 +22,9 @@ geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
 
 # define the points layers
 # out_path = out_dir + jahr + "/"
-zipname = "delfi-brosi-20211015"
+zipname = "delfi-brosi-20211105"
 # zipname = sys.argv[2]
-pointfiles = {"nv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+pointfiles = {"nv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
               # out_dir + "Delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
 
               "fv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
