@@ -1,0 +1,156 @@
+---
+title: "Begleitgrafiken für ÖV-Deutschlandkarte--automatisiert erstellt"
+params:
+  prefix: "preset"
+output: 
+  html_document:
+    code_folding: "hide"
+---
+
+Dieses Notebook erzeugt automatisch analytische Grafiken aus verarbeiteten GTFS-Feeds.
+
+```{r, include=FALSE}
+library(sf)
+library(ggplot2)
+library(tidyverse)
+```
+```{r, echo=FALSE}
+print(paste0("Verwendeter Datensatz: ", params$prefix))
+```
+
+
+```{r, include=FALSE}
+gem.df <- st_read(paste0("/home/maita/VW_Data_Hub/Gap_Map/out/", params$prefix, "_gem.stops.4326.geojson"))
+kre.df <- st_read(paste0("/home/maita/VW_Data_Hub/Gap_Map/out/", params$prefix, "_kre.stops.4326.geojson"))
+```
+
+## In Städten mit hoher Fahrtendichte (Nahverkehr) wird der ÖPNV häufiger genutzt
+```{r, include=FALSE}
+anteile.df <- read.csv("/home/maita/VW_Data_Hub/Gap_Map/out/verkehrsanteile.csv")
+head(anteile.df)
+```
+
+```{r, include=FALSE}
+# Welche Untersuchungsräume fehlen?
+gem.df  %>% 
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  full_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ)) 
+```
+```{r, include=FALSE}
+gem.df %>% filter(str_detect(Raumeinheit, "Rüdersdorf"))
+```
+Für alle Städte, die sich zwischen INKAR und SrV direkt in Übereinstimmung bringen lassen
+```{r, echo=FALSE}
+gem.df  %>% 
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  inner_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
+  mutate(n.abs.sfl = n.nv.sfl ) %>% # + n.fv.sfl) %>%
+  select(Raumeinheit, ÖV.relativ, n.abs.sfl) %>%
+  ggplot(aes(x=ÖV.relativ, y=n.abs.sfl)) +
+    geom_point() +
+    # geom_text(aes(label=Raumeinheit)) +
+    geom_smooth(method = 'lm')+
+    ggrepel::geom_text_repel(aes(label=Raumeinheit)) +
+    ylab("Fahrten je km² bebauter Fläche und Tag") +
+    xlab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")
+```
+
+## Bevölkerung je ÖPNV-Versorgungsgrad (Nahverkehr) in Kreisen
+```{r, fig.width=8, fig.height=4, echo=FALSE}
+kre.df %>% 
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(Versorgung.cat = cut(n.nv.sfl,breaks=c(0,125,250,500,1000, Inf))) %>%
+  # mutate(Versorgung.cat = reorder(Versorgung.cat, length(levels(Versorgung.cat))-as.numeric(labels(Versorgung.cat)))) %>%
+  mutate(Versorgung.cat = factor(Versorgung.cat, levels = rev(levels(Versorgung.cat)))) %>%
+  mutate(Versorgung.cat = recode_factor(Versorgung.cat, "(0,125]"= "< 125" , 
+                                        "(125,250]" = "> 125", 
+                                        "(250,500]" = "> 250", 
+                                        "(500,1e+03]" = "> 500", 
+                                        "(1e+03,Inf]" = "> 1.000" )) %>%
+  as.tibble() %>%
+  group_by(Versorgung.cat) %>%
+  summarise(EWZ = sum(EWZ)) %>%
+    ggplot(aes(x=1, y=EWZ, fill=Versorgung.cat, weight=EWZ, label=EWZ)) +
+    geom_bar(stat="identity",position="stack") +
+    geom_text(position = position_stack(vjust = 0.5)) + 
+  theme(axis.ticks.y = element_blank(), axis.text.y = element_blank()) +
+    ylab(element_blank()) +
+    xlab(element_blank()) +
+  scale_fill_brewer(palette = 1, type = 'seq',name = "Abfahrten je km² und Tag")+
+  # scale_fill_discrete(name = "Abfahrten je km² und Tag") +
+  scale_y_continuous(name="Einwohnerzahl gesamt", 
+                       labels = scales::comma) +
+  coord_flip() +
+  theme(legend.position = "bottom")
+```
+
+
+## Die Bahnhöfe mit den 20 meisten Fernzughalten 2021
+```{r, include=FALSE}
+nstops.df <- read.csv("/home/maita/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv")
+head(nstops.df)
+```
+
+```{r, echo=FALSE}
+nstops.df %>%
+  arrange(-n_day) %>%
+  mutate(stop_name = if_else(str_starts(stop_name, "Berlin Hbf"), "Berlin Hbf", as.character(stop_name))) %>%
+  group_by(stop_name) %>%
+  summarise(n_day = sum(n_day)) %>%
+  arrange(-n_day) %>%
+  head(20)%>%
+  mutate(stop_name = str_replace(stop_name, " Hbf", "")) %>%
+  mutate(stop_name = str_replace(stop_name, " Fernbf", "")) %>%
+  # mutate(stop_name = as.factor(stop_name))%>%
+  ggplot(aes(y=reorder(stop_name, order(n_day)), x=n_day)) +
+  geom_col() +
+  geom_text(aes(label=stop_name), nudge_x = -40, color="white") +
+  theme(axis.ticks.y = element_blank(), axis.text.y = element_blank()) +
+  ylab(element_blank()) +
+  xlab("Fernzughalte pro Tag im Jahr 2021")
+```
+
+## Die 30 Städte mit den meisten Abfahrten (nah und fern) je bebauter Fläche (>= 50.000 EW)
+```{r, echo=FALSE}
+gem.df  %>% 
+  filter(EWZ>50000) %>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(n.abs.sfl = n.fv.sfl + n.nv.sfl,
+         n.abs.ewz = (n.fv.ewz + n.nv.ewz)*1000) %>%
+  arrange(-n.abs.sfl) %>%
+  head(30) %>%
+  ggplot(aes(x=reorder(Raumeinheit, -order(n.abs.sfl)))) +
+    geom_point(aes(y=n.abs.sfl), color='blue')+
+    geom_line(aes(y=n.abs.sfl, group=1), color='blue')+
+    geom_point(aes(y=n.abs.ewz), color='green')+
+    geom_line(aes(y=n.abs.ewz, group=1), color='green')+
+    theme(axis.text.x = element_text(angle = 90, lineheight = 0.6),
+          axis.text.y.left = element_text(color = 'blue'),
+          axis.title.y.left = element_text(color = 'blue'),
+          axis.text.y.right = element_text(color = 'green'),
+          axis.title.y.right = element_text(color = 'green')) +
+    # ylim(c(0,2900))+
+    xlab(element_blank()) +
+    scale_y_continuous(name = "Fahrten je km² bebauter Fläche und Tag",
+                       sec.axis = sec_axis(trans=~., name = "Fahrten je 1.000 Einwohner und Tag"),
+                       limits = c(0, NA))
+  
+
+```
+
+```{include=FALSE}
+# lapply(
+#   X = list("delfi-brosi-20211105"), 
+#   FUN = function(p){
+#     print(p)
+#     render(input = "/home/maita/VW_Data_Hub/Gap_Map/src/automatisierte_grafiken.Rmd", 
+#            output_format = word_document(), 
+#            output_file = paste0("/home/maita/VW_Data_Hub/Gap_Map/",p), 
+#            params = list(prefix=p))
+#     }
+#   )
