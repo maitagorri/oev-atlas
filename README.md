@@ -10,8 +10,14 @@ Project Organization
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
     │   ├── interim        <- Intermediate data that has been transformed.
+    |   |    ├── geo       <- geo-data
+    │   |    └── gtfs      <- GTFS databases etc.
     │   ├── processed      <- The final data sets to be mapped/reported.
     │   └── raw            <- Data as downloaded/obtained from external sources.
+    │        ├── bkg       <- Bundesamt für Kartographie & Geodäsie 
+    │        ├── delfi     <- DELFI
+    │        ├── gtfs.de   <- gtfs.de (Brosi--Gesamtdatensatz nicht öffentlich)
+    │        └── inkar     <- Indikatoren und Karten zur Raum- und Stadtentwicklung
     │
     ├── environment.yml    <- The requirements file for reproducing the analysis environment, set 
     │                         up with `conda env create -f environment.yml`
