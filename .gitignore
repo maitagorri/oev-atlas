@@ -1,7 +1,7 @@
-# Ignore non-code, for now
-/out
-/raw
-/doc
+# Ignore data
+data/raw/*/*
+data/raw/*/*/
+!data/raw/*/.gitkeep 
 
 # Ignore notebook checkpoints
 src/.ipynb_checkpoints
