@@ -4,5 +4,4 @@ data/raw/*/*/
 !data/raw/*/.gitkeep 
 
 # Ignore notebook checkpoints
-src/.ipynb_checkpoints
-scrap/.ipynb_checkpoints
+.ipynb_checkpoints
