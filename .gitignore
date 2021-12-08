@@ -5,6 +5,8 @@ data/*
 !data/interim/.gitkeep
 !data/processed/.gitkeep 
 
+# Ignore word outputs
+*.docx
 
 # Ignore notebook checkpoints
 .ipynb_checkpoints
