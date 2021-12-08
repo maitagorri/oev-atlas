@@ -13,38 +13,47 @@ geographies.
 
 import pandas as pd
 import geopandas as gpd
+import zipfile
+import re
 
 # Welche Pfade?
-out_dir = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/"
-# out_dir = "/home/maita/Nextcloud/Documents/Work/Gap_Map/out/"
-geo_path = "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/raw/geo/"
-# geo_path = "/home/maita/VW_Data_Hub/Gap_Map/raw/geo/"
+out_dir = "../../data/processed/"
+work_dir = "../../data/interim/"
+raw_dir = "../../data/raw/"
 
-# define the points layers
-# out_path = out_dir + jahr + "/"
-zipname = "delfi-brosi-20211105"
-# zipname = sys.argv[2]
-pointfiles = {"nv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
-              # out_dir + "Delfi/20211105_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+# define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
-              "fv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
-              #out_dir + "Brosi/2021/2021_reissue_2fv.nstops.csv"
+pointfiles = {"nv": work_dir + "20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+
+              "fv": work_dir + "2021_reissue_2.fv.nstops.csv"
              }
+# check that files are present
+
+for file in pointfiles.values():
+    try: 
+        open(file)
+    except:
+        raise(FileNotFoundError(file + " missing"))
+
+dataset_name = "nah-fern-211015" # filename for output files
+
 
 ###############
     # areas
 ###############
 
 # define the area layers
-admin_area_path = geo_path + "vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/"
-shapefiles = {"gem":admin_area_path + "VG250_GEM.shp",
-              "kre":admin_area_path + "VG250_KRS.shp",
-              "lan":admin_area_path + "VG250_LAN.shp"}
+# make sure your zip-files' structure agrees with this
+admin_area_file = raw_dir + 'bkg/' + 'vg250-ew_12-31.utm32s.shape.ebenen.zip'
+shapefile_names = {"gem":"VG250_GEM.shp",
+                  "kre":"VG250_KRS.shp",
+                  "lan":"VG250_LAN.shp"}
 
 # define additional information tables
-sfl_tables= {"gem":geo_path + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
-              "kre":geo_path + "Tabelle_Siedlungsflaeche_Kreis.csv",
-              "lan":geo_path + "Tabelle_Siedlungsflaeche_Land.csv"}
+# these will depend on the names under which you saved your INKAR export
+sfl_tables= {"gem":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
+              "kre":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
+              "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"}
 
 
 def scopeCountsInAreas(countname, ncounts_df, area_gdf):
@@ -112,15 +121,18 @@ def aggregateShapes(area_gdf, pointfiles):
     return(agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']])
 
 
-for level in shapefiles.keys():
-#     level = "lan"
-    area_path = shapefiles[level]
+# extract zip files
+zf = zipfile.ZipFile(admin_area_file)
+zf.extractall(work_dir)
+
+for level in shapefile_names.keys():
+    shapefile_name = shapefile_names[level]
     # Read in admin areas
-    area_gdf = gpd.read_file(area_path)
+    area_gdf = gpd.read_file(work_dir + 'vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/' + shapefile_name)
     # process
     agg_gdf = aggregateShapes(area_gdf, pointfiles)
     # write out:
-    out_file = zipname + "_" + level +".stops.4326.geojson"
+    out_file = dataset_name + "_" + level +".stops.4326.geojson"
     agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
     print("Wrote " + out_file)
 
@@ -145,17 +157,7 @@ germany = germany.to_crs('epsg:4326') # we are in 43
 
 stopspace = gpd.GeoDataFrame({'geometry':[germany.unary_union.convex_hull]}, crs="epsg:4326")
 
-# we could do a grid around all points, 
-# but that seems a bit excessive right now; it might be quicker this way
-# ncounts_df = pd.read_csv(pointfiles['all'])
-# ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
-#                                geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
-#                                crs="epsg:4326").to_crs("epsg:3035")
-
-
-# iterate little boxes with sidelength sl:                                       
-# xmin,ymin,xmax,ymax =  stopspace.total_bounds
-sls = [5, 1] # km 50, 10, 1, 
+sls = [5, 1] # sidelengths of desired grids in kilometers
 
 def make_grid(scale, stopspace):   
     # scale is a sidelength in km
@@ -190,9 +192,8 @@ def make_grid(scale, stopspace):
 
 def aggregateGrid(grid_gdf, ncounts_gdf, scope):
     print("Getting " + scope + " counts for grid with " + str(len(grid_gdf)) + " polygons")
-#    agg_counts_gdf = grids[scale] # or if this gets too unwieldy load from disk...
+    
     agg_counts_gdf = grid_gdf.to_crs('epsg:4326')
-    ### !!! I'm worried we might lose shapes here, if they don't have one of the type of counts. Maybe better to keep them separate (like above)
     ## get sum of stuff in each AGS
     agg_counts_gdf = gpd.sjoin(agg_counts_gdf, 
                                ncounts_gdf[["n_day","geometry"]].to_crs('epsg:4326'), 
@@ -258,7 +259,7 @@ for scope in pointfiles:
 
     # write out:
 for scale in sls:
-    out_file = zipname + "_" + str(scale) +"k.stops.4326.geojson"
+    out_file = dataset_name + "_" + str(scale) +"k.stops.4326.geojson"
     print("Writing "+ out_file)
     countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
 

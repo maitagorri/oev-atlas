@@ -1,13 +1,24 @@
 ---
 title: "Begleitgrafiken für ÖV-Deutschlandkarte--automatisiert erstellt"
 params:
-  prefix: "preset"
+  prefix: "nah-fern-211015"
 output: 
   html_document:
     code_folding: "hide"
 ---
 
+
+
 Dieses Notebook erzeugt automatisch analytische Grafiken aus verarbeiteten GTFS-Feeds.
+
+```{r, eval=FALSE, include=FALSE}
+# knit with parameters to select dataset
+
+rmarkdown::render('automatisierte-grafiken.Rmd',
+                  output_file = paste0('../../reports/automatisierte_grafiken-', params$prefix, '.docx')) # set prefix in preamble!
+```
+
+
 
 ```{r, include=FALSE}
 library(sf)
@@ -18,15 +29,26 @@ library(tidyverse)
 print(paste0("Verwendeter Datensatz: ", params$prefix))
 ```
 
+```{r, include=FALSE}
+# Geodateien
+gem.df <- st_read(paste0("../../data/processed/", params$prefix, "_gem.stops.4326.geojson"))
+kre.df <- st_read(paste0("../../data/processed/", params$prefix, "_kre.stops.4326.geojson"))
+```
 
 ```{r, include=FALSE}
-gem.df <- st_read(paste0("/home/maita/VW_Data_Hub/Gap_Map/out/", params$prefix, "_gem.stops.4326.geojson"))
-kre.df <- st_read(paste0("/home/maita/VW_Data_Hub/Gap_Map/out/", params$prefix, "_kre.stops.4326.geojson"))
+# Einzelhaltestellen
+nstops.df <- read.csv(paste0("../../data/interim/2021_reissue_2.fv.nstops.csv"))
 ```
+
+
+```{r, include=F}
+# Verkehrsanteile
+anteile.df <- read.csv("../../data/interim/verkehrsanteile.csv")
+```
+
 
 ## In Städten mit hoher Fahrtendichte (Nahverkehr) wird der ÖPNV häufiger genutzt
 ```{r, include=FALSE}
-anteile.df <- read.csv("/home/maita/VW_Data_Hub/Gap_Map/out/verkehrsanteile.csv")
 head(anteile.df)
 ```
 
@@ -92,7 +114,6 @@ kre.df %>%
 
 ## Die Bahnhöfe mit den 20 meisten Fernzughalten 2021
 ```{r, include=FALSE}
-nstops.df <- read.csv("/home/maita/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv")
 head(nstops.df)
 ```
 
@@ -143,14 +164,4 @@ gem.df  %>%
 
 ```
 
-```{include=FALSE}
-# lapply(
-#   X = list("delfi-brosi-20211105"), 
-#   FUN = function(p){
-#     print(p)
-#     render(input = "/home/maita/VW_Data_Hub/Gap_Map/src/automatisierte_grafiken.Rmd", 
-#            output_format = word_document(), 
-#            output_file = paste0("/home/maita/VW_Data_Hub/Gap_Map/",p), 
-#            params = list(prefix=p))
-#     }
-#   )
+
