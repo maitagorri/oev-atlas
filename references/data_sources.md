@@ -48,6 +48,18 @@ Sollfahrplandaten (kostenpflichtig) nach [gtfs.de](https://gtfs.de/de/feeds/)
 #### Siedlungsfläche
 - Indikatoren müssen für jede Verwaltungsebene (Kreise, Gemeinden) manuell ausgewählt und heruntergeladen werden
 
+### srv2018
+
+[Mobilität in Städten 2018](https://tu-dresden.de/bu/verkehr/ivs/srv/srv-2018)
+
+#### Verkehrsanteile in Städten
+
+[Report (PDF)](https://tu-dresden.de/bu/verkehr/ivs/srv/ressourcen/dateien/SrV2018_Staedtevergleich.pdf)
+
+- manuell kopierte Daten aus dem SrV Städtevergleich
+- Tab 15, S. 131ff.
+- im Repo getrackt (um wiederholtes manuelles Kopieren zu vermeiden)
+
 
 --------
 
