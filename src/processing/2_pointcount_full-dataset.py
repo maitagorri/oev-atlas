@@ -25,11 +25,17 @@ raw_dir = "../../data/raw/"
 
 pointfiles = {"nv": work_dir + "20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
 
-              "fv": "/home/jupyter-maita.schade/VW_Data_Hub/Gap_Map/out/2021/2021_reissue_2fv.nstops.csv"
+              "fv": work_dir + "2021_reissue_2.fv.nstops.csv"
              }
+# check that files are present
 
+for file in pointfiles.values():
+    try: 
+        open(file)
+    except:
+        raise(FileNotFoundError(file + " missing"))
 
-dataset_name = "nah-fern-211015"
+dataset_name = "nah-fern-211015" # filename for output files
 
 
 ###############
