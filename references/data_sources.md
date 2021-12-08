@@ -4,10 +4,10 @@ oev_atlas
 Raw data and Sources
 ------------
 
-# bkg       
+### bkg       
 Verwaltungsgebiete nach [Bundesamt für Kartographie & Geodäsie](https://gdz.bkg.bund.de/index.php/default/verwaltungsgebiete-1-250-000-ebenen-stand-01-01-vg250-ebenen-01-01.html)
 
-## Verwaltungsgebiete 1:250 000 (Ebenen), Stand 01.01. (VG250 01.01.) Georeferenzierung: UTM32s
+#### Verwaltungsgebiete 1:250 000 (Ebenen), Stand 01.01. (VG250 01.01.) Georeferenzierung: UTM32s
  
     [Download link](https://daten.gdz.bkg.bund.de/produkte/vg/vg250_ebenen_0101/aktuell/vg250_01-01.utm32s.shape.ebenen.zip)
 
@@ -23,29 +23,29 @@ Verwaltungsgebiete nach [Bundesamt für Kartographie & Geodäsie](https://gdz.bk
     Jahres.
 
 
-# delfi 
+### delfi 
 Sollfahrplandaten nach [DELFI](https://www.opendata-oepnv.de/ht/de/willkommen)
 
-## Aktuelle Sollfahrplandaten
+#### Aktuelle Sollfahrplandaten
     [DELFI-Portal zum Download](https://www.opendata-oepnv.de/ht/de/organisation/delfi/startseite?tx_vrrkit_view%5Bdataset_name%5D=deutschlandweite-sollfahrplandaten-gtfs&tx_vrrkit_view%5Baction%5D=details&tx_vrrkit_view%5Bcontroller%5D=View)
     
     - Fahrplandaten im GTFS-Format
     - Jeweils für verbleibende Fahrplanperiode
     - Login zum Download notwendig
 
-# gtfs.de
+### gtfs.de
 Sollfahrplandaten (kostenpflichtig) nach [gtfs.de](https://gtfs.de/de/feeds/)
 
-## Vollständige Sollfahrplandaten 
+#### Vollständige Sollfahrplandaten 
     - Aufbereitet im GTFS-Format
     - Gesamtdatensatz kostenpflichtig
     - Wöchentliche Feeds kostenlos herunterladbar
     - FV-Routen im Gesamtdatensatz können durch `route_names` aus dem wöchentlichen Feed identifiziert werden
 
-# inkar     
+### inkar     
 [Indikatoren und Karten zur Raum- und Stadtentwicklung](https://www.inkar.de/Default)
 
-## Siedlungsfläche
+#### Siedlungsfläche
     - Indikatoren müssen für jede Verwaltungsebene (Kreise, Gemeinden) manuell ausgewählt und heruntergeladen werden
 
 
