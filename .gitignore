@@ -1,7 +1,10 @@
 # Ignore data
-data/raw/*/*
-data/raw/*/*/
-!data/raw/*/.gitkeep 
+data/*
+!data/raw/*/.gitkeep
+!data/raw/srv2018/verkehrsanteile.txt
+!data/interim/.gitkeep
+!data/processed/.gitkeep 
+
 
 # Ignore notebook checkpoints
 .ipynb_checkpoints
