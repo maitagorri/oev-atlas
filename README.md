@@ -3,6 +3,8 @@ oev_atlas
 
 Processing data & setting up website for Agora Verkehrswende OV-Atlas
 
+
+
 Project Organization
 ------------
 
@@ -26,21 +28,30 @@ Project Organization
     │
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │
-    ├── scrap              <- Notebooks & exploratory code. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
+    ├── scrap              <- Notebooks & exploratory code. These are not guaranteed to work with
+    │                         the files as they are organized now, but kept as a repository for 
+    │                         useful auxiliary analyses.
     │
-    └── src                <- Source code for use in this project.
+    └── src                <- Source code for use in this project. Needs manual interference!
         │
         ├── processing     <- Scripts to extract and turn data into useable (geo-)formats
-        │   └── make_dataset.py
+        │   ├── 1_processstops-db.ipynb
+        │   ├── 2_pointcount_full-dataset.py
+        │   └── verkehrsanteile_cleaning.ipynb
         │
         ├── report         <- Scripts to produce preliminary reports from GTFS
-        │   └── build_features.py
+        │   └── automatisierte-grafiken.Rmd
         │
         └── webmap         <- HTML to embed Mapbox Style in website
-            └── visualize.py
+            └── gapmap.mapboxgl.html
     
+
+Notes on data
+------------
+- Detail on data sources is document under [references](https://github.com/maitagorri/oev-atlas/blob/organizing_files/references/data_sources.md)
+- Neither raw nor processed data are shared here, because of their size and, for the most part, public availability
+    - One exception are mode shares from SrV 2018, since I had to manually copy them out of a pdf
+
 
 --------
 
