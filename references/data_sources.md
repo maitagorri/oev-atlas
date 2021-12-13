@@ -58,7 +58,7 @@ Sollfahrplandaten (kostenpflichtig) nach [gtfs.de](https://gtfs.de/de/feeds/)
 
 - manuell kopierte Daten aus dem SrV Städtevergleich
 - Tab 15, S. 131ff.
-- im Repo getrackt (um wiederholtes manuelles Kopieren zu vermeiden)
+- im Repo getrackt (um wiederholtes manuelles Kopieren zu vermeiden): [SrV18--Verkehrsanteile](https://github.com/maitagorri/oev-atlas/blob/main/data/raw/srv2018/verkehrsanteile.txt)
 
 
 --------
