@@ -1,0 +1,144 @@
+title: "Begleitgrafiken für ÖV-Deutschlandkarte--automatisiert erstellt"
+output: 
+  html_document:
+    code_folding: "hide"
+---
+
+
+
+Dieses Notebook erzeugt automatisch analytische Grafiken aus verarbeiteten GTFS-Feeds.
+
+```{r, eval=FALSE, include=FALSE}
+# knit with parameters to select dataset
+
+rmarkdown::render('automatisierte-grafiken.Rmd',
+                  output_file = paste0('../../reports/automatisierte_grafiken-', params$prefix, '.docx')) # set prefix in preamble!
+```
+
+
+
+```{r, include=FALSE}
+library(sf)
+library(ggplot2)
+library(tidyverse)
+```
+```{r, echo=FALSE}
+prefix = "nah-fern-211015"
+print(paste0("Verwendeter Datensatz: ", prefix))
+```
+
+```{r, include=FALSE}
+# Geodateien
+gem.df <- st_read(paste0("../../data/processed/", prefix, "_gem.stops.4326.geojson"))
+kre.df <- st_read(paste0("../../data/processed/", prefix, "_kre.stops.4326.geojson"))
+```
+
+```{r, include=FALSE}
+# Einzelhaltestellen
+nstops.df <- read.csv(paste0("../../data/interim/2021_reissue_2.fv.nstops.csv"))
+```
+
+
+```{r, include=F}
+# Verkehrsanteile
+anteile.df <- read.csv("../../data/interim/verkehrsanteile.csv")
+```
+
+
+## In Städten mit hoher Fahrtendichte (Nahverkehr) wird der ÖPNV häufiger genutzt
+```{r, include=FALSE}
+head(anteile.df)
+```
+
+```{r, include=FALSE}
+# Welche Untersuchungsräume fehlen?
+gem.df  %>% 
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  full_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ)) 
+```
+
+Für alle Städte, die sich zwischen INKAR und SrV direkt in Übereinstimmung bringen lassen
+```{r, echo=FALSE}
+plot.df = gem.df  %>% 
+  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(Farbe = if_else(Raumeinheit=="Cottbus", 'Cottbus', 'alles andere')) %>%
+  inner_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
+  mutate(n.abs.sfl = n.nv.sfl ) %>% # + n.fv.sfl) %>%
+  select(Raumeinheit, ÖV.relativ, n.abs.sfl, Farbe)
+```
+
+
+```{r, echo=FALSE}
+plot.df%>%
+  # arrange(-ÖV.relativ/n.abs.sfl) %>%
+  # pull(Raumeinheit) %>% unique()
+  ggplot(aes(x=ÖV.relativ, y=n.abs.sfl, label=Raumeinheit)) +
+    geom_smooth(method = 'lm')+
+    geom_point(aes(color=Farbe, size = if_else(Raumeinheit=="Cottbus",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=Raumeinheit, color=Farbe)) +
+    ylab("Fahrten je km² bebauter Fläche und Tag") +
+    xlab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = F) +
+    ggpmisc::stat_fit_glance(method = 'lm',
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+### x and y exchanged
+
+```{r}
+plot.df %>%
+  ggplot(aes(y=ÖV.relativ, x=n.abs.sfl, label=Raumeinheit)) +
+    geom_smooth(method = 'lm')+
+    geom_point(aes(color=Farbe, size = if_else(Raumeinheit=="Cottbus",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=Raumeinheit, color=Farbe)) +
+    xlab("Fahrten je km² bebauter Fläche und Tag") +
+    ylab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = F) +
+    ggpmisc::stat_fit_glance(method = 'lm',
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+
+Standardized Major Axis
+```{r}
+# install.packages('smatr')
+library(smatr)
+```
+```{r}
+sma(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+lm(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+loess(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+```
+
+
+```{r}
+plot.df %>%
+  ggplot(aes(y=ÖV.relativ, x=n.abs.sfl, label=Raumeinheit)) +
+    ggpmisc::stat_ma_line(method = 'SMA') +
+    geom_point(aes(color=Farbe, size = if_else(Raumeinheit=="Cottbus",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=Raumeinheit, color=Farbe)) +
+    xlab("Fahrten je km² bebauter Fläche und Tag") +
+    ylab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = "none") +
+    ggpmisc::stat_fit_glance(method = SMA,
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+
