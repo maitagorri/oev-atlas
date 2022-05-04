@@ -20,7 +20,7 @@ from selenium.webdriver.chrome.options import Options
 
 # Parameter
 
-download_dir = "../../data/raw/delfi/"
+download_dir = "../../data/raw/delfi/dl/"
 
 # Delfi-Zugangsdaten sollten in einer separaten Textdatei hinterlegt werden
 with open("/home/jupyter-maita.schade/delfi_cred.txt") as f:
@@ -76,11 +76,13 @@ WebDriverWait(driver, 5)
 # Anmeldung
 
 try:
+    print('Anmeldung laden')
     anmeldung_load = WebDriverWait(driver, 5).until(
         expected_conditions.element_to_be_clickable((By.CSS_SELECTOR,
                                                      "a[data-target='#login']")
                                                    )
     )
+    print('Anmeldung geladen')
 except:
     print("Problem with Anmelde-Button")
 
@@ -89,11 +91,13 @@ if anmelde_button:
     print ("Anmeldung...")
     anmelde_button[0].click()
 
-
+    print ("Anmeldebutton geklickt")
     driver.find_element_by_css_selector("#user").send_keys(uname)
+    print('username')
     driver.find_element_by_css_selector("#pass").send_keys(pwd)
+    print('pwd')
     driver.find_element_by_css_selector("input[value='Anmelden']").click()
-    
+    print('Anmeldebutton 2')
 #     acceptterms = driver.find_elements_by_css_selector("#acceptterms")
 #     if acceptterms:
 #         terms_load = WebDriverWait(driver, 5).until(
@@ -112,28 +116,43 @@ if anmelde_button:
 # Download
 download_buttons = driver.find_elements_by_css_selector("td>a[href^='https://www.opendata-oepnv.de/fileadmin/datasets/delfi']")
 if download_buttons:
+    print('download button gefunden')
     data_url = download_buttons[0].get_attribute("href")
     download_buttons[0].click()
+    print('download button geklickt')
     
     try:
-        finalterms_load = WebDriverWait(driver, 5).until(
-            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR,
-                                                         "a[class='btn btn-primary acceptdownload'")
-                                                       )
-        )
+        print('terms laden')
+        finalterms_load = WebDriverWait(driver, timeout=5) #.until(
+        #     expected_conditions.element_to_be_clickable((By.CSS_SELECTOR,
+        #                                                  "a[class='btn btn-primary acceptdownload'")
+        #                                                )
+        # )
+        # print('terms sind clickable')
 
         finalterms = driver.find_elements_by_css_selector("a[class='btn btn-primary acceptdownload'")
         if finalterms:
             print("Downloading " + data_url)
+            print(finalterms[0].get_attribute('href'))
             finalterms[0].click()
+            print("clicked final terms")
     except:
         pass
 # except:
 #     print('Problem with Download')
+print("got past download try")
 
-
+# See if I can wget it now... don't think so
+# import wget
+# print("trying wget")
+# wget.download(data_url, out = download_dir)
+# print("completed wget")
 # In[ ]:
 
+# Try opening data url in new tab
+driver.get(data_url)
+print('trying to get via new tab')
+# Monitoring download
 
 download_path = download_dir + data_url.split('/')[-1]
 
