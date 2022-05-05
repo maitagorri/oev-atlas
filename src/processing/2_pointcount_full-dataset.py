@@ -16,6 +16,10 @@ import geopandas as gpd
 import zipfile
 import re
 
+# Welcher Datensatz?
+zipname = '20220419_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
+
+
 # Welche Pfade?
 out_dir = "../../data/processed/"
 work_dir = "../../data/interim/"
@@ -23,9 +27,9 @@ raw_dir = "../../data/raw/"
 
 # define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
-pointfiles = {"nv": work_dir + "20211015_fahrplaene_gesamtdeutschland_gtfs.nstops.csv",
+pointfiles = {"nv": work_dir + zipname + ".nv.nstops.csv",
 
-              "fv": work_dir + "2021_reissue_2.fv.nstops.csv"
+              "fv": work_dir + zipname + ".fv.nstops.csv"
              }
 # check that files are present
 
@@ -35,7 +39,7 @@ for file in pointfiles.values():
     except:
         raise(FileNotFoundError(file + " missing"))
 
-dataset_name = "nah-fern-211015" # filename for output files
+# dataset_name = "nah-fern-211015" # filename for output files
 
 
 ###############
@@ -46,17 +50,17 @@ dataset_name = "nah-fern-211015" # filename for output files
 # make sure your zip-files' structure agrees with this
 admin_area_file = raw_dir + 'bkg/' + 'vg250-ew_12-31.utm32s.shape.ebenen.zip'
 shapefile_names = {"gem":"VG250_GEM.shp",
-                  "kre":"VG250_KRS.shp",
+                  "krs":"VG250_KRS.shp",
                   "lan":"VG250_LAN.shp"}
 
 # define additional information tables
 # these will depend on the names under which you saved your INKAR export
 sfl_tables= {"gem":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
-              "kre":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
+              "krs":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
               "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"}
 
 
-def scopeCountsInAreas(countname, ncounts_df, area_gdf):
+def scopeCountsInAreas(colname, ncounts_df, area_gdf):
     # read counts per station, with point locations
     ncounts_gdf = gpd.GeoDataFrame(ncounts_df,
                                    geometry = gpd.points_from_xy(ncounts_df.stop_lon, ncounts_df.stop_lat),
@@ -67,76 +71,110 @@ def scopeCountsInAreas(countname, ncounts_df, area_gdf):
                               how="left", 
                               op="contains" # spatial join
                         )[["AGS","n_day"]
-                        ].groupby("AGS").sum().rename({"n_day":countname},axis=1
+                        ].groupby("AGS").sum().rename({"n_day":colname},axis=1
                         ) # keep AGS that have counts in them
     return(agg_counts_df)
     
-    
-def aggregateShapes(area_gdf, pointfiles):
-    # fix projection
-    area_gdf = area_gdf.to_crs("epsg:4326")
-    area_gdf.AGS = area_gdf.AGS.astype(int) # to compare to other sources, get reasonable type for AGS
-  
-    # get counts of stops in all shapes associated with each AGS
-    agg_counts_df = area_gdf[["AGS"]].drop_duplicates()
-    for scope in pointfiles.keys():        
-        print("Counting "+scope)
-        ncounts_df = pd.read_csv(pointfiles[scope])
-        agg_counts_df = scopeCountsInAreas("n."+scope, 
-                                           ncounts_df, 
-                                           area_gdf
-                                          ).merge(agg_counts_df, how="right", on="AGS") 
 
-    # Aggregate other metrics by AGS
-    agg_areas_df = area_gdf[["AGS","KFL","EWZ"]       # select only relevant cols
-                        ].groupby("AGS").sum() 
     
-    # select correct shapes, and dissolve them by AGS/GEN
-    exists_gdf = area_gdf[(area_gdf.KFL>0)][["AGS","GEN","geometry"]].dissolve(by="AGS")
+def loadAreas(area_path):
+    ## clean the area file for our purposes
+    area_gdf = gpd.read_file(area_path)
+    # to compare to other sources, get reasonable type for AGS
+    area_gdf.AGS = area_gdf.AGS.astype(int) 
+    # fix projection, aggregate qualitative
+    area_qual_gdf = area_gdf.to_crs("epsg:4326"
+                        )[(area_gdf.KFL>0)
+                        ][["AGS","GEN","SN_L","SN_K","SN_G","geometry"] # select correct shapes
+                        ].dissolve(by="AGS")                     # and dissolve them by AGS/GEN
+    # aggregate quantitative
+    area_quant_df = area_gdf[["AGS","KFL","EWZ"]
+                             ].groupby('AGS'
+                             ).sum(
+                             ).reset_index()
     
-
-    # join together valid shapes, aggregate numbers, and stop counts
-    agg_gdf = exists_gdf.merge(agg_counts_df, on='AGS'
-                        ).merge(agg_areas_df, on='AGS')
-    # Merge SFL onto shape
+    # put it all together
+    area_gdf = area_qual_gdf.merge(area_quant_df, how='left', on='AGS')
+    return(area_gdf)
+    
+    
+def mergeAreasInkar(gdf, sfl_paths, level):
+    ## Merge INKAR data onto shapes
     # reading in the corresponding Siedlungsflaeche
-    area_sfl_path = sfl_tables[level]
+    area_sfl_path = sfl_paths[level]
     area_sfl_df = pd.read_csv(area_sfl_path, skiprows = [1], sep = ";", decimal = ",")
     
     # Add in Siednlungsflächenanteil
-    agg_sfl_gdf = agg_gdf.merge(area_sfl_df[["Kennziffer",'Raumeinheit','Anteil Siedlungs- und Verkehrsfläche']],
+    sfl_gdf = gdf.merge(area_sfl_df[["Kennziffer",'Anteil Siedlungs- und Verkehrsfläche']],
                                 how="left", 
                                 left_on = "AGS", 
                                 right_on = "Kennziffer")
+    # calc actual SFL
+    sfl_gdf['SFL'] = sfl_gdf['KFL'] * sfl_gdf['Anteil Siedlungs- und Verkehrsfläche']/100
     
-    # calculate proper SFL, other numbers
-    agg_sfl_gdf['SFL'] = agg_sfl_gdf['KFL'] * agg_sfl_gdf['Anteil Siedlungs- und Verkehrsfläche']/100
-    for scope in pointfiles.keys():
-        agg_sfl_gdf['n.'+scope+'.ewz'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['EWZ']
-        agg_sfl_gdf['n.'+scope+'.kfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['KFL']
-        agg_sfl_gdf['n.'+scope+'.sfl'] = agg_sfl_gdf['n.'+scope]/agg_sfl_gdf['SFL']
-    # add across all scopes
-    agg_sfl_gdf['n.ges.sfl'] = agg_sfl_gdf[['n.'+scope+'.sfl' for scope in pointfiles.keys()]].sum(axis=1)
-    # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
-    return(agg_sfl_gdf[['AGS', 'Raumeinheit', 'EWZ', 'KFL','SFL']+[col for col in agg_sfl_gdf.columns if col.startswith('n.')] + ['geometry']])
+    # drop unnecessary cols
+    sfl_gdf = sfl_gdf.drop(['Kennziffer','Anteil Siedlungs- und Verkehrsfläche'], axis=1)
+    
+    return(sfl_gdf)
+    
 
+def addScopeCounts(gdf, pointfiles):
+    ## add counts to shapes
+    # get counts of stops in all shapes associated with each AGS
+    df = gdf
+    for scope in pointfiles.keys():        
+        print("Counting "+scope)
+        ncounts_df = pd.read_csv(pointfiles[scope])
+        df = scopeCountsInAreas("halte."+scope, 
+                                           ncounts_df, 
+                                           gdf
+                                          ).merge(df, how="right", on="AGS")
+    # restore spatial df
+    gdf = gpd.GeoDataFrame(df, geometry=df.geometry)
+    return(gdf)
+
+
+
+
+def tidyCountsGdf(gdf, scopes):
+    ## Finalize data content
+    # calculate totals
+    gdf['halte.ges'] = gdf[['halte.'+scope for scope in scopes]].sum(axis=1)
+    # calculate ratios
+    for scope in ['ges'] + scopes:
+        gdf['halte.'+scope+'.EWZ'] = gdf['halte.'+scope]/gdf['EWZ']
+        gdf['halte.'+scope+'.SFL'] = gdf['halte.'+scope]/gdf['SFL']
+        
+    ## Tidying up
+    gdf.rename(columns={"GEN":level.upper()}, inplace=True)
+    # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
+    return(gdf[[level.upper(),"SN_L","SN_K", "SN_G", 'EWZ', 'KFL','SFL'] +
+                            ['halte.'+scope for scope in ['ges'] + scopes] + 
+                            ['halte.'+scope +'.'+q for scope in ['ges'] + scopes for q in ['EWZ','SFL']] +
+                            ['geometry']])
+
+def aggregateShapes(gdf, pointfiles, level):
+    gdf = mergeAreasInkar(gdf, sfl_tables, level)
+    gdf = addScopeCounts(gdf, pointfiles)
+    scopes = list(pointfiles.keys())
+    gdf = tidyCountsGdf(gdf,scopes)
+    return(gdf)
 
 # extract zip files
 zf = zipfile.ZipFile(admin_area_file)
 zf.extractall(work_dir)
 
+### run over all levels
 for level in shapefile_names.keys():
     shapefile_name = shapefile_names[level]
     # Read in admin areas
-    area_gdf = gpd.read_file(work_dir + 'vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/' + shapefile_name)
+    area_gdf = loadAreas(work_dir + 'vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/' + shapefile_names[level])
     # process
-    agg_gdf = aggregateShapes(area_gdf, pointfiles)
+    agg_gdf = aggregateShapes(area_gdf, pointfiles, level)
     # write out:
-    out_file = dataset_name + "_" + level +".stops.4326.geojson"
+    out_file = zipname + "." + level.upper() +".geojson"
     agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
-    print("Wrote " + out_file)
-
-
+    print("Wrote " + out_file)               
 
 ###############
     # grid
