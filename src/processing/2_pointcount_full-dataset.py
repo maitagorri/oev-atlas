@@ -27,9 +27,10 @@ raw_dir = "../../data/raw/"
 
 # define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
-pointfiles = {"nv": work_dir + zipname + ".nv.nstops.csv",
-
-              "fv": work_dir + zipname + ".fv.nstops.csv"
+pointfiles = {
+              "fz": work_dir + zipname + ".fz.nstops.csv",
+              "fb": work_dir + zipname + ".fb.nstops.csv",
+              "nv": work_dir + zipname + ".nv.nstops.csv"
              }
 # check that files are present
 
@@ -297,7 +298,7 @@ for scope in pointfiles:
 
     # write out:
 for scale in sls:
-    out_file = dataset_name + "_" + str(scale) +"k.stops.4326.geojson"
+    out_file = zipname + "_" + str(scale) +"k.geojson"
     print("Writing "+ out_file)
     countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
 
