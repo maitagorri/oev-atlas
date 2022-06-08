@@ -17,13 +17,18 @@ import zipfile
 import re
 
 # Welcher Datensatz?
-zipname = '20220419_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
+zipname = '20220425_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
 
 
 # Welche Pfade?
 out_dir = "../../data/processed/"
 work_dir = "../../data/interim/"
 raw_dir = "../../data/raw/"
+
+# file for logging
+logfile = work_dir + zipname + ".log"
+with open(logfile, 'a') as f:
+    f.write('## Zählung\n')
 
 # define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
@@ -166,16 +171,24 @@ zf = zipfile.ZipFile(admin_area_file)
 zf.extractall(work_dir)
 
 ### run over all levels
-for level in shapefile_names.keys():
-    shapefile_name = shapefile_names[level]
-    # Read in admin areas
-    area_gdf = loadAreas(work_dir + 'vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/' + shapefile_names[level])
-    # process
-    agg_gdf = aggregateShapes(area_gdf, pointfiles, level)
-    # write out:
-    out_file = zipname + "." + level.upper() +".geojson"
-    agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
-    print("Wrote " + out_file)               
+with open(logfile,'a') as f:
+    f.write("### Haltezahlen\n")
+    for level in shapefile_names:
+        f.write("{}:\n".format(level.upper()))
+        shapefile_name = shapefile_names[level]
+        # Read in admin areas
+        area_gdf = loadAreas(work_dir + 'vg250-ew_12-31.utm32s.shape.ebenen/vg250-ew_ebenen_1231/' + shapefile_names[level])
+        # process
+        agg_gdf = aggregateShapes(area_gdf, pointfiles, level)
+        # write out:
+        out_file = zipname + "." + level.upper() +".geojson"
+        agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
+        print("Wrote " + out_file)
+        f.write("\t".join(pointfiles).upper() + "\n")
+        for scope in pointfiles:
+            geomn = agg_gdf['halte.'+scope].sum()
+            f.write("{}\t".format(geomn))
+        f.write("\n")
 
 ###############
     # grid
@@ -279,26 +292,44 @@ countgrids = {
 }
 
 # Add total count to each grid
+
 for scale in countgrids:
     countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
 
-# check count consistency
-for scope in pointfiles:
-    n = points[scope].n_day.sum()
-    gridn = [countgrids[scale]['n.'+scope].sum() for scale in sls]
-    if any([g!=n for g in gridn]):
-        print('Problem mit ' + scope + '!!')
-        print(n)
-        print(gridn)
-        
-# check average counts        
-for scope in pointfiles:
-    print ("Durchschnittliche " + scope + '-Abfahrten je Haltestelle und Tag:')
-    print (points[scope].n_day.sum()/points[scope].shape[0])
-
+    
     # write out:
 for scale in sls:
     out_file = zipname + "_" + str(scale) +"k.geojson"
     print("Writing "+ out_file)
     countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
+    
+    
+###### Checking    
+with open(logfile,'a') as f:
+
+    # check count consistency
+    for scope in pointfiles:
+        n = points[scope].n_day.sum()
+        gridn = [countgrids[scale]['n.'+scope].sum() for scale in sls]
+        if any([g!=n for g in gridn]):
+            print('Problem mit ' + scope + '!!')
+            print(n)
+            print(gridn)
+
+    for scale in countgrids:
+        f.write("{}:\n".format(scale).upper())
+        f.write("\t".join(pointfiles).upper() + "\n")
+        for scope in pointfiles:
+            gridn = countgrids[scale]['n.'+scope].sum()
+            f.write("{}\t".format(gridn))
+        f.write("\n")
+
+
+    # check average counts  
+    for scope in pointfiles:
+        print ("Durchschnittliche " + scope + '-Abfahrten je Haltestelle und Tag:')
+        f.write("Durchschnittliche {}-Abfahrten je Haltestelle und Tag:\n".format(scope))
+        print (points[scope].n_day.sum()/points[scope].shape[0])
+        f.write("{}\n".format(points[scope].n_day.sum()/points[scope].shape[0]))
+
 
