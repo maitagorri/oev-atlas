@@ -1,0 +1,185 @@
+title: "Begleitgrafiken für ÖV-Deutschlandkarte--automatisiert erstellt"
+output: 
+  html_document:
+    code_folding: "hide"
+---
+
+
+
+Dieses Notebook erzeugt automatisch analytische Grafiken aus verarbeiteten GTFS-Feeds.
+
+```{r, eval=FALSE, include=FALSE}
+# knit with parameters to select dataset
+
+rmarkdown::render('automatisierte-grafiken.Rmd',
+                  output_file = paste0('../../reports/automatisierte_grafiken-', params$prefix, '.docx')) # set prefix in preamble!
+```
+
+
+
+```{r, include=FALSE}
+library(sf)
+library(ggplot2)
+library(tidyverse)
+```
+```{r, echo=FALSE}
+prefix = "20220419_fahrplaene_gesamtdeutschland_gtfs"
+print(paste0("Verwendeter Datensatz: ", prefix))
+```
+
+```{r, include=FALSE}
+# Geodateien
+gem.df <- st_read(paste0("../../data/processed/", prefix, ".GEM.geojson"))
+krs.df <- st_read(paste0("../../data/processed/", prefix, ".KRS.geojson"))
+lan.df <- st_read(paste0("../../data/processed/", prefix, ".LAN.geojson"))
+```
+
+```{r, include=FALSE}
+# Einzelhaltestellen
+nstops.df <- read.csv(paste0("../../data/interim/",prefix,".nv.nstops.csv"))
+
+```
+
+
+```{r, include=F}
+# Verkehrsanteile
+anteile.df <- read.csv("../../data/interim/verkehrsanteile.csv") %>%
+  mutate(Untersuchungsraum = trimws(Untersuchungsraum)) %>%
+  mutate(Untersuchungsraum = str_replace(Untersuchungsraum, "Bernau", "Bernau bei Berlin"))
+  
+  
+```
+
+
+## In Städten mit hoher Fahrtendichte (Nahverkehr) wird der ÖPNV häufiger genutzt
+```{r, include=FALSE}
+head(anteile.df)
+arrange(anteile.df,Untersuchungsraum)
+```
+
+```{r, include=FALSE}
+# Welche Untersuchungsräume fehlen?
+krs.df  %>% 
+  mutate(KRS = str_replace(KRS, ", .+adt", "")) %>%
+  mutate(KRS = str_replace(KRS, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(KRS = str_replace(KRS, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  full_join(anteile.df, by = c("KRS" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ))
+
+gem.df  %>% 
+  mutate(GEM = str_replace(GEM, ", .+adt", "")) %>%
+  mutate(GEM = str_replace(GEM, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(GEM = str_replace(GEM, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Lübben.+", "Lübben/Lübbenau"))%>%
+  mutate(GEM = str_replace(GEM, "Michendorf|Nuthetal", "Michendorf/Nuthetal"))%>%
+  mutate(GEM = str_replace(GEM, "Eichwalde|Zeuthen", "Eichwalde/Zeuthen"))%>%
+  mutate(GEM = str_replace(GEM, "Beetzendorf|Diesdorf", "Beetzendorf-Diesdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Eilsleben|Harbke|Hötensleben|Sommersdorf|Ummendorf|Völpke|Wefensleben", "Obere Aller"))%>%
+  mutate(GEM = if_else(LAN==15, str_replace(GEM, "Möckern", "Möckern-Loburg-Fläming"), GEM))%>%
+  full_join(anteile.df, by = c("GEM" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ))
+# Südliche Altmark gibt es nicht mehr; alle nach Gardelegen eingegliedert
+
+gem.df %>%
+  filter(str_detect(GEM,"Möckern"))
+
+krs.df%>%
+  filter(str_detect(KRS,"Altmark"))
+
+anteile.df %>% filter(str_detect(Untersuchungsraum, "Möckern"))
+```
+
+Für alle Städte, die sich zwischen INKAR und SrV direkt in Übereinstimmung bringen lassen
+```{r, echo=FALSE}
+plot.df = gem.df  %>% 
+  tibble() %>%
+  # select(-geometry
+  mutate(GEM = str_replace(GEM, ", .+adt", "")) %>%
+  mutate(GEM = str_replace(GEM, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(GEM = str_replace(GEM, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Lübben.+", "Lübben/Lübbenau"))%>%
+  mutate(GEM = str_replace(GEM, "Michendorf|Nuthetal", "Michendorf/Nuthetal"))%>%
+  mutate(GEM = str_replace(GEM, "Eichwalde|Zeuthen", "Eichwalde/Zeuthen"))%>%
+  mutate(GEM = str_replace(GEM, "Beetzendorf|Diesdorf", "Beetzendorf-Diesdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Eilsleben|Harbke|Hötensleben|Sommersdorf|Ummendorf|Völpke|Wefensleben", "Obere Aller"))%>%
+  mutate(GEM = if_else(SN_L==15, str_replace(GEM, "Möckern", "Möckern-Loburg-Fläming"), GEM))%>%
+  group_by(GEM) %>%
+  summarise(halte.nv.SFL = weighted.mean(halte.nv.SFL, SFL), SN_L=first(SN_L)) %>%
+  mutate(Farbe = if_else(SN_L=='08', 'Baden-Württemberg', 'alles andere')) %>%
+  inner_join(anteile.df, by = c("GEM" = "Untersuchungsraum")) %>%
+  mutate(n.abs.sfl = halte.nv.SFL) %>% # + n.fv.sfl) %>%
+  select(GEM, ÖV.relativ, n.abs.sfl, Farbe)
+
+tibble(gem.df) %>% select(-geometry)
+```
+
+
+```{r, echo=FALSE}
+plot.df%>%
+  # arrange(-ÖV.relativ/n.abs.sfl) %>%
+  # pull(Raumeinheit) %>% unique()
+  ggplot(aes(x=ÖV.relativ, y=n.abs.sfl, label=GEM)) +
+    geom_smooth(method = 'lm')+
+    geom_point(aes(color=Farbe, size = if_else(Farbe=="Baden-Württemberg",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=GEM, color=Farbe)) +
+    ylab("Fahrten je km² bebauter Fläche und Tag") +
+    xlab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = F) +
+    ggpmisc::stat_fit_glance(method = 'lm',
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+### x and y exchanged
+
+```{r}
+plot.df %>%
+  ggplot(aes(y=ÖV.relativ, x=n.abs.sfl, label=Raumeinheit)) +
+    geom_smooth(method = 'lm')+
+    geom_point(aes(color=Farbe, size = if_else(Raumeinheit=="Cottbus",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=Raumeinheit, color=Farbe)) +
+    xlab("Fahrten je km² bebauter Fläche und Tag") +
+    ylab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = F) +
+    ggpmisc::stat_fit_glance(method = 'lm',
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+
+Standardized Major Axis
+```{r}
+# install.packages('smatr')
+library(smatr)
+```
+```{r}
+sma(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+lm(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+loess(formula = ÖV.relativ ~ n.abs.sfl, plot.df)
+```
+
+
+```{r, fig.width=10, fig.height=6}
+plot.df %>%
+  ggplot(aes(y=ÖV.relativ, x=n.abs.sfl, label=GEM)) +
+    ggpmisc::stat_ma_line(method = 'sma') +
+    geom_point(aes(color=Farbe, size = if_else(Farbe=="Baden-Württemberg",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=GEM, color=Farbe)) +
+    xlab("Fahrten je km² bebauter Fläche und Tag") +
+    ylab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = "none") +
+    ggpmisc::stat_fit_glance(method = sma,
+                       method.args = list(formula = y ~ x),
+                       geom = 'text',
+                       aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+       label.x.npc = 'right', label.y.npc = 0.35, size = 3) 
+```
+
