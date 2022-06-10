@@ -55,15 +55,18 @@ for file in pointfiles.values():
 # define the area layers
 # make sure your zip-files' structure agrees with this
 admin_area_file = raw_dir + 'bkg/' + 'vg250-ew_12-31.utm32s.shape.ebenen.zip'
-shapefile_names = {"gem":"VG250_GEM.shp",
-                  "krs":"VG250_KRS.shp",
-                  "lan":"VG250_LAN.shp"}
+shapefile_names = {
+    "gem":"VG250_GEM.shp",
+    "krs":"VG250_KRS.shp",
+    "lan":"VG250_LAN.shp"}
 
 # define additional information tables
 # these will depend on the names under which you saved your INKAR export
-sfl_tables= {"gem":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
-              "krs":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
-              "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"}
+sfl_tables= {
+    "gem":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
+    "krs":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
+    "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"
+            }
 
 
 def scopeCountsInAreas(colname, ncounts_df, area_gdf):
@@ -91,7 +94,7 @@ def loadAreas(area_path):
     # fix projection, aggregate qualitative
     area_qual_gdf = area_gdf.to_crs("epsg:4326"
                         )[(area_gdf.KFL>0)
-                        ][["AGS","GEN","SN_L","SN_K","SN_G","geometry"] # select correct shapes
+                        ][["AGS","GEN","geometry"] # select correct shapes
                         ].dissolve(by="AGS")                     # and dissolve them by AGS/GEN
     # aggregate quantitative
     area_quant_df = area_gdf[["AGS","KFL","EWZ"]
@@ -154,7 +157,7 @@ def tidyCountsGdf(gdf, scopes):
     ## Tidying up
     gdf.rename(columns={"GEN":level.upper()}, inplace=True)
     # what I actually need: individual AGS, Raumeinheit, sum EWZ, KFL, SFL, n, selected geometry 
-    return(gdf[[level.upper(),"SN_L","SN_K", "SN_G", 'EWZ', 'KFL','SFL'] +
+    return(gdf[[level.upper(),"AGS", 'EWZ', 'KFL','SFL'] +
                             ['halte.'+scope for scope in ['ges'] + scopes] + 
                             ['halte.'+scope +'.'+q for scope in ['ges'] + scopes for q in ['EWZ','SFL']] +
                             ['geometry']])
