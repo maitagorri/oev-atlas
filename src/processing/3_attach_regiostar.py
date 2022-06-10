@@ -11,6 +11,7 @@ Attach RegioStaR7 classification to gem dataset.
 
 # Welcher Datensatz?
 zipname = '20220425_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
+timestamp = '20220610-150005'
 # Welches RegioStaR-Jahr?
 rstar_year = 19
 
@@ -25,7 +26,7 @@ work_dir = "../../data/interim/"
 raw_dir = "../../data/raw/"
 
 # files
-gem_path = out_dir + zipname + '.GEM.geojson'
+gem_path = out_dir + timestamp + '_' + zipname + '.GEM.geojson'
 rst_path = raw_dir + "bmdv/" + 'regiostar-referenzdateien.xlsx'
 logfile = work_dir + zipname + ".log"
 

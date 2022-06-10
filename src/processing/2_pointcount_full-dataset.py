@@ -15,10 +15,14 @@ import pandas as pd
 import geopandas as gpd
 import zipfile
 import re
+from datetime import datetime
 
 # Welcher Datensatz?
 zipname = '20220425_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
 
+# Timestamp für Versionierung
+timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+print("Timestamp:\t{}".format(timestamp))
 
 # Welche Pfade?
 out_dir = "../../data/processed/"
@@ -29,6 +33,7 @@ raw_dir = "../../data/raw/"
 logfile = work_dir + zipname + ".log"
 with open(logfile, 'a') as f:
     f.write('## Zählung\n')
+    f.write('Timestamp: {}\n'.format(timestamp))
 
 # define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
@@ -184,7 +189,7 @@ with open(logfile,'a') as f:
         # process
         agg_gdf = aggregateShapes(area_gdf, pointfiles, level)
         # write out:
-        out_file = zipname + "." + level.upper() +".geojson"
+        out_file = timestamp + '_' + zipname + "." + level.upper() +".geojson"
         agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
         print("Wrote " + out_file)
         f.write("\t".join(pointfiles).upper() + "\n")
@@ -197,142 +202,142 @@ with open(logfile,'a') as f:
     # grid
 ###############
     
-# make a grid -- one for each sidelength, in good projection
-# Here, all grids will be in EPSG3035, a Germany-centered EA-projection
-from shapely.geometry import Polygon
-import numpy as np
+# # make a grid -- one for each sidelength, in good projection
+# # Here, all grids will be in EPSG3035, a Germany-centered EA-projection
+# from shapely.geometry import Polygon
+# import numpy as np
 
-# Germany bounding box
-world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
-germany = world[world.name == "Germany"] 
-germany['geometry'] = germany.geometry.buffer(50000)#50k buffer
-germany = germany.to_crs('epsg:4326') # we are in 43
+# # Germany bounding box
+# world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
+# germany = world[world.name == "Germany"] 
+# germany['geometry'] = germany.geometry.buffer(50000)#50k buffer
+# germany = germany.to_crs('epsg:4326') # we are in 43
 
-# Convex hull bounding box __around Germany__              
+# # Convex hull bounding box __around Germany__              
 
-stopspace = gpd.GeoDataFrame({'geometry':[germany.unary_union.convex_hull]}, crs="epsg:4326")
+# stopspace = gpd.GeoDataFrame({'geometry':[germany.unary_union.convex_hull]}, crs="epsg:4326")
 
-sls = [5, 1] # sidelengths of desired grids in kilometers
+# sls = [5, 1] # sidelengths of desired grids in kilometers
 
-def make_grid(scale, stopspace):   
-    # scale is a sidelength in km
-    # stopspace is a Geodataframe containing the complex hull of the space to be covered with grid, IN EPSG:3035
-    print("Making grid with sidelength "+ str(scale) + "km")
-    stopspace = stopspace.to_crs("epsg:3035") # in 3035 for grid making
-    # iterate little boxes with sidelength sl:
-    bounds = stopspace.total_bounds
-    xmin,ymin,xmax,ymax =  bounds
-    slm = scale*1000 # m
-    rows = int(np.ceil((ymax-ymin) /  slm)) 
-    cols = int(np.ceil((xmax-xmin) / slm))  
-    print(str(rows) + " x " + str(cols))
-    XleftOrigin = xmin
-    XrightOrigin = xmin + slm
-    YtopOrigin = ymax
-    YbottomOrigin = ymax- slm
-    polygons = []
-    for i in range(cols):
-        Ytop = YtopOrigin
-        Ybottom =YbottomOrigin
-        for j in range(rows):
-            polygons.append(Polygon([(XleftOrigin, Ytop), (XrightOrigin, Ytop), (XrightOrigin, Ybottom), (XleftOrigin, Ybottom)])) 
-            Ytop = Ytop - slm
-            Ybottom = Ybottom - slm
-        XleftOrigin = XleftOrigin + slm
-        XrightOrigin = XrightOrigin + slm
-    grid = gpd.GeoDataFrame({'geometry':polygons})
-    grid.crs = 'epsg:3035'
-    grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] 
-    return(grid.to_crs("epsg:4326"))
+# def make_grid(scale, stopspace):   
+#     # scale is a sidelength in km
+#     # stopspace is a Geodataframe containing the complex hull of the space to be covered with grid, IN EPSG:3035
+#     print("Making grid with sidelength "+ str(scale) + "km")
+#     stopspace = stopspace.to_crs("epsg:3035") # in 3035 for grid making
+#     # iterate little boxes with sidelength sl:
+#     bounds = stopspace.total_bounds
+#     xmin,ymin,xmax,ymax =  bounds
+#     slm = scale*1000 # m
+#     rows = int(np.ceil((ymax-ymin) /  slm)) 
+#     cols = int(np.ceil((xmax-xmin) / slm))  
+#     print(str(rows) + " x " + str(cols))
+#     XleftOrigin = xmin
+#     XrightOrigin = xmin + slm
+#     YtopOrigin = ymax
+#     YbottomOrigin = ymax- slm
+#     polygons = []
+#     for i in range(cols):
+#         Ytop = YtopOrigin
+#         Ybottom =YbottomOrigin
+#         for j in range(rows):
+#             polygons.append(Polygon([(XleftOrigin, Ytop), (XrightOrigin, Ytop), (XrightOrigin, Ybottom), (XleftOrigin, Ybottom)])) 
+#             Ytop = Ytop - slm
+#             Ybottom = Ybottom - slm
+#         XleftOrigin = XleftOrigin + slm
+#         XrightOrigin = XrightOrigin + slm
+#     grid = gpd.GeoDataFrame({'geometry':polygons})
+#     grid.crs = 'epsg:3035'
+#     grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] 
+#     return(grid.to_crs("epsg:4326"))
 
-def aggregateGrid(grid_gdf, ncounts_gdf, scope):
-    print("Getting " + scope + " counts for grid with " + str(len(grid_gdf)) + " polygons")
+# def aggregateGrid(grid_gdf, ncounts_gdf, scope):
+#     print("Getting " + scope + " counts for grid with " + str(len(grid_gdf)) + " polygons")
     
-    agg_counts_gdf = grid_gdf.to_crs('epsg:4326')
-    ## get sum of stuff in each AGS
-    agg_counts_gdf = gpd.sjoin(agg_counts_gdf, 
-                               ncounts_gdf[["n_day","geometry"]].to_crs('epsg:4326'), 
-                               how="left", 
-                               op="contains" # spatial join
-                       ).drop("index_right",axis=1
-                       ).reset_index(
-                       ).dissolve(by="index",aggfunc='sum'
-                       ).rename({"n_day":"n."+scope},axis=1)
-    agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].drop(columns='geometry')
-        # reset index to geometry for easier joining of different counts across grid later
-    return(agg_counts_gdf)
+#     agg_counts_gdf = grid_gdf.to_crs('epsg:4326')
+#     ## get sum of stuff in each AGS
+#     agg_counts_gdf = gpd.sjoin(agg_counts_gdf, 
+#                                ncounts_gdf[["n_day","geometry"]].to_crs('epsg:4326'), 
+#                                how="left", 
+#                                op="contains" # spatial join
+#                        ).drop("index_right",axis=1
+#                        ).reset_index(
+#                        ).dissolve(by="index",aggfunc='sum'
+#                        ).rename({"n_day":"n."+scope},axis=1)
+#     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].drop(columns='geometry')
+#         # reset index to geometry for easier joining of different counts across grid later
+#     return(agg_counts_gdf)
     
 
-# Read in point files (as dictionary)
-def pointfileReader(filepath, stopspace):
-    points = pd.read_csv(filepath)
-    points_gdf = gpd.GeoDataFrame(points,
-                                  geometry = gpd.points_from_xy(points.stop_lon, 
-                                                                points.stop_lat),
-                                  crs="epsg:4326").to_crs("epsg:4326")
-    points_gdf = gpd.sjoin(points_gdf, stopspace[['geometry']], how="inner", op="within" # spatial join
-                        )
-    return(points_gdf)
+# # Read in point files (as dictionary)
+# def pointfileReader(filepath, stopspace):
+#     points = pd.read_csv(filepath)
+#     points_gdf = gpd.GeoDataFrame(points,
+#                                   geometry = gpd.points_from_xy(points.stop_lon, 
+#                                                                 points.stop_lat),
+#                                   crs="epsg:4326").to_crs("epsg:4326")
+#     points_gdf = gpd.sjoin(points_gdf, stopspace[['geometry']], how="inner", op="within" # spatial join
+#                         )
+#     return(points_gdf)
     
-# Make grids
-grids = {s:make_grid(s,germany) for s in sls}
-# get pointfiles ready
-points = {k:pointfileReader(pointfiles[k], germany) for k in pointfiles}
+# # Make grids
+# grids = {s:make_grid(s,germany) for s in sls}
+# # get pointfiles ready
+# points = {k:pointfileReader(pointfiles[k], germany) for k in pointfiles}
 
 
-# For each scale, aggregate all the different count files across grid, then concatenate
-countgrids = { 
-    scale:pd.concat(                  # concatenating the different scope counts of one grid
-        [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
-                       points[scope], 
-                       scope) 
-         for scope in pointfiles      # for all scopes/different input count files
-        ],
-        axis=1
-    ).join(grids[scale]               # getting the geometry column back 
-    )
-    for scale in sls                  # for all different grid scales
-}
+# # For each scale, aggregate all the different count files across grid, then concatenate
+# countgrids = { 
+#     scale:pd.concat(                  # concatenating the different scope counts of one grid
+#         [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
+#                        points[scope], 
+#                        scope) 
+#          for scope in pointfiles      # for all scopes/different input count files
+#         ],
+#         axis=1
+#     ).join(grids[scale]               # getting the geometry column back 
+#     )
+#     for scale in sls                  # for all different grid scales
+# }
 
-# Add total count to each grid
+# # Add total count to each grid
 
-for scale in countgrids:
-    countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
+# for scale in countgrids:
+#     countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
 
     
-    # write out:
-for scale in sls:
-    out_file = zipname + "_" + str(scale) +"k.geojson"
-    print("Writing "+ out_file)
-    countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
+#     # write out:
+# for scale in sls:
+#     out_file = zipname + "_" + str(scale) +"k.geojson"
+#     print("Writing "+ out_file)
+#     countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
     
     
 ###### Checking    
-with open(logfile,'a') as f:
+# with open(logfile,'a') as f:
 
-    # check count consistency
-    for scope in pointfiles:
-        n = points[scope].n_day.sum()
-        gridn = [countgrids[scale]['n.'+scope].sum() for scale in sls]
-        if any([g!=n for g in gridn]):
-            print('Problem mit ' + scope + '!!')
-            print(n)
-            print(gridn)
+#     # check count consistency
+#     for scope in pointfiles:
+#         n = points[scope].n_day.sum()
+#         gridn = [countgrids[scale]['n.'+scope].sum() for scale in sls]
+#         if any([g!=n for g in gridn]):
+#             print('Problem mit ' + scope + '!!')
+#             print(n)
+#             print(gridn)
 
-    for scale in countgrids:
-        f.write("{}:\n".format(scale).upper())
-        f.write("\t".join(pointfiles).upper() + "\n")
-        for scope in pointfiles:
-            gridn = countgrids[scale]['n.'+scope].sum()
-            f.write("{}\t".format(gridn))
-        f.write("\n")
+#     for scale in countgrids:
+#         f.write("{}:\n".format(scale).upper())
+#         f.write("\t".join(pointfiles).upper() + "\n")
+#         for scope in pointfiles:
+#             gridn = countgrids[scale]['n.'+scope].sum()
+#             f.write("{}\t".format(gridn))
+#         f.write("\n")
 
 
-    # check average counts  
-    for scope in pointfiles:
-        print ("Durchschnittliche " + scope + '-Abfahrten je Haltestelle und Tag:')
-        f.write("Durchschnittliche {}-Abfahrten je Haltestelle und Tag:\n".format(scope))
-        print (points[scope].n_day.sum()/points[scope].shape[0])
-        f.write("{}\n".format(points[scope].n_day.sum()/points[scope].shape[0]))
+    # # check average counts  
+    # for scope in pointfiles:
+    #     print ("Durchschnittliche " + scope + '-Abfahrten je Haltestelle und Tag:')
+    #     f.write("Durchschnittliche {}-Abfahrten je Haltestelle und Tag:\n".format(scope))
+    #     print (points[scope].n_day.sum()/points[scope].shape[0])
+    #     f.write("{}\n".format(points[scope].n_day.sum()/points[scope].shape[0]))
 
 
