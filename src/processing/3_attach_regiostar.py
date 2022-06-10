@@ -39,6 +39,12 @@ gem_df = gpd.read_file(gem_path)
 
 # merge
 gem_df_merged = gem_df.merge(rst_df[["gem_{}".format(rstar_year),"RegioStaR7"]], left_on='AGS', right_on='gem_{}'.format(rstar_year), how='left')
+pd.concat([
+    gem_df_merged.loc[:,'GEM':'SFL'],
+    gem_df_merged.loc[:, 'RegioStaR7'],
+    gem_df_merged.loc[:,'halte.ges':'geometry']
+], axis=1)
+                              
 n_no_match = len(gem_df_merged[gem_df_merged.RegioStaR7.isna()])
 
 # write
