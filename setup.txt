@@ -1,0 +1,6 @@
+conda create -n oev-atlas
+conda activate oev-atlas
+conda config --env --add channels conda-forge
+conda config --env --set channel_priority strict
+conda install python=3 ipykernel sqlalchemy geopandas
+ipython kernel install --user --name=oev-atlas
