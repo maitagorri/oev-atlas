@@ -1,7 +1,7 @@
 ---
 title: "Begleitgrafiken für ÖV-Deutschlandkarte--automatisiert erstellt"
 params:
-  prefix: "nah-fern-211015"
+  prefix: "20220425_fahrplaene_gesamtdeutschland_gtfs"
 output: 
   html_document:
     code_folding: "hide"
@@ -24,6 +24,7 @@ rmarkdown::render('automatisierte-grafiken.Rmd',
 library(sf)
 library(ggplot2)
 library(tidyverse)
+library(smatr)
 ```
 ```{r, echo=FALSE}
 print(paste0("Verwendeter Datensatz: ", params$prefix))
@@ -31,13 +32,16 @@ print(paste0("Verwendeter Datensatz: ", params$prefix))
 
 ```{r, include=FALSE}
 # Geodateien
-gem.df <- st_read(paste0("../../data/processed/", params$prefix, "_gem.stops.4326.geojson"))
-kre.df <- st_read(paste0("../../data/processed/", params$prefix, "_kre.stops.4326.geojson"))
+files = list.files("../../data/processed/",full.names = TRUE)
+
+gem.df <- st_read(files[grepl(paste0(params$prefix,'.','GEM'), files)][1])
+kre.df <- st_read(files[grepl(paste0(params$prefix,'.','KRS'), files)][1])
 ```
 
 ```{r, include=FALSE}
 # Einzelhaltestellen
-nstops.df <- read.csv(paste0("../../data/interim/2021_reissue_2.fv.nstops.csv"))
+nstops.fz.df <- read.csv(paste0("../../data/interim/",params$prefix,".fz.nstops.csv"))
+nstops.fb.df <- read.csv(paste0("../../data/interim/",params$prefix,".fb.nstops.csv"))
 ```
 
 
@@ -54,39 +58,90 @@ head(anteile.df)
 
 ```{r, include=FALSE}
 # Welche Untersuchungsräume fehlen?
+kre.df  %>% 
+  mutate(KRS = str_replace(KRS, ", .+adt", "")) %>%
+  mutate(KRS = str_replace(KRS, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(KRS = str_replace(KRS, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  full_join(anteile.df, by = c("KRS" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ))
+
 gem.df  %>% 
-  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
-  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
-  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
-  full_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
-  filter(!is.na(MIV.relativ)&is.na(EWZ)) 
-```
-```{r, include=FALSE}
-gem.df %>% filter(str_detect(Raumeinheit, "Rüdersdorf"))
+  mutate(SN_L = str_sub(AGS,1,2)) %>%
+  mutate(GEM = str_replace(GEM, ", .+adt", "")) %>%
+  mutate(GEM = str_replace(GEM, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(GEM = str_replace(GEM, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Lübben.+", "Lübben/Lübbenau"))%>%
+  mutate(GEM = str_replace(GEM, "Michendorf|Nuthetal", "Michendorf/Nuthetal"))%>%
+  mutate(GEM = str_replace(GEM, "Eichwalde|Zeuthen", "Eichwalde/Zeuthen"))%>%
+  mutate(GEM = str_replace(GEM, "Beetzendorf|Diesdorf", "Beetzendorf-Diesdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Eilsleben|Harbke|Hötensleben|Sommersdorf|Ummendorf|Völpke|Wefensleben", "Obere Aller"))%>%
+  mutate(GEM = if_else(SN_L==15, str_replace(GEM, "Möckern", "Möckern-Loburg-Fläming"), GEM))%>%
+  full_join(anteile.df, by = c("GEM" = "Untersuchungsraum")) %>%
+  filter(!is.na(MIV.relativ)&is.na(EWZ))
+# Südliche Altmark gibt es nicht mehr; alle nach Gardelegen eingegliedert
+
+gem.df %>%
+  filter(str_detect(GEM,"Möckern"))
+
+kre.df%>%
+  filter(str_detect(KRS,"Altmark"))
+
+anteile.df %>% filter(str_detect(Untersuchungsraum, "Möckern"))
 ```
 Für alle Städte, die sich zwischen INKAR und SrV direkt in Übereinstimmung bringen lassen
 ```{r, echo=FALSE}
-gem.df  %>% 
-  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
-  mutate(Raumeinheit = str_replace(Raumeinheit, "Ludwigshafen am .+", "Ludwigshafen"))%>%
-  mutate(Raumeinheit = str_replace(Raumeinheit, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
-  inner_join(anteile.df, by = c("Raumeinheit" = "Untersuchungsraum")) %>%
-  mutate(n.abs.sfl = n.nv.sfl ) %>% # + n.fv.sfl) %>%
-  select(Raumeinheit, ÖV.relativ, n.abs.sfl) %>%
-  ggplot(aes(x=ÖV.relativ, y=n.abs.sfl)) +
-    geom_point() +
-    # geom_text(aes(label=Raumeinheit)) +
-    geom_smooth(method = 'lm')+
-    ggrepel::geom_text_repel(aes(label=Raumeinheit)) +
-    ylab("Fahrten je km² bebauter Fläche und Tag") +
-    xlab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")
+plot.df = gem.df  %>% 
+  tibble() %>%
+  # select(-geometry
+  mutate(SN_L = str_sub(AGS,1,2)) %>%
+  mutate(GEM = str_replace(GEM, ", .+adt", "")) %>%
+  mutate(GEM = str_replace(GEM, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(GEM = str_replace(GEM, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Lübben.+", "Lübben/Lübbenau"))%>%
+  mutate(GEM = str_replace(GEM, "Michendorf|Nuthetal", "Michendorf/Nuthetal"))%>%
+  mutate(GEM = str_replace(GEM, "Eichwalde|Zeuthen", "Eichwalde/Zeuthen"))%>%
+  mutate(GEM = str_replace(GEM, "Beetzendorf|Diesdorf", "Beetzendorf-Diesdorf"))%>%
+  mutate(GEM = str_replace(GEM, "Eilsleben|Harbke|Hötensleben|Sommersdorf|Ummendorf|Völpke|Wefensleben", "Obere Aller"))%>%
+  mutate(GEM = if_else(SN_L==15, str_replace(GEM, "Möckern", "Möckern-Loburg-Fläming"), GEM))%>%
+  group_by(GEM) %>%
+  summarise(halte.nv.SFL = weighted.mean(halte.nv.SFL, SFL), SN_L=first(SN_L)) %>%
+  # mutate(Farbe = if_else(SN_L=='08', 'Baden-Württemberg', 'alles andere')) %>%
+  inner_join(anteile.df, by = c("GEM" = "Untersuchungsraum")) %>%
+  # mutate(n.abs.sfl = halte.nv.SFL) %>% # + n.fv.sfl) %>%
+  select(GEM, ÖV.relativ, halte.nv.SFL)#, Farbe)
 ```
+
+Standardized Major Axis
+```{r}
+library(ggpmisc)
+plot.df %>%
+  ggplot(aes(y=ÖV.relativ, x=halte.nv.SFL, label=GEM)) +
+    stat_ma_line(method = 'SMA') +
+    geom_point() + #aes(color=Farbe, size = if_else(Farbe=="Baden-Württemberg",10,1))) +
+    # geom_text(aes(label=Raumeinheit)) +
+    # scale_color_manual(values = c('black','red'))+
+    ggrepel::geom_text_repel(aes(label=GEM), max.overlaps = 8)+ #, color=Farbe)) +
+    xlab("Fahrten je km² bebauter Fläche und Tag") +
+    ylab("Anteil der Verkehrsleistung, die mit dem ÖV absolviert wird (%)")+
+    guides(size = "none") +
+    stat_ma_eq(aes(label = 
+      paste(after_stat(eq.label),
+        after_stat(rr.label),
+            # after_stat(p.value),
+            sep = "*\", \"*")),
+            method = "SMA")
+
+```
+
 
 ## Bevölkerung je ÖPNV-Versorgungsgrad (Nahverkehr) in Kreisen
 ```{r, fig.width=8, fig.height=4, echo=FALSE}
 kre.df %>% 
-  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
-  mutate(Versorgung.cat = cut(n.nv.sfl,breaks=c(0,125,250,500,1000, Inf))) %>%
+  as_tibble() %>%
+  mutate(KRS = str_replace(KRS, ", .+adt", "")) %>%
+  mutate(KRS = str_replace(KRS, "Ludwigshafen am .+", "Ludwigshafen"))%>%
+  mutate(KRS = str_replace(KRS, "Rüdersdorf bei .+", "Rüdersdorf"))%>%
+  mutate(Versorgung.cat = cut(halte.nv.SFL,breaks=c(0,125,250,500,1000, Inf))) %>%
   # mutate(Versorgung.cat = reorder(Versorgung.cat, length(levels(Versorgung.cat))-as.numeric(labels(Versorgung.cat)))) %>%
   mutate(Versorgung.cat = factor(Versorgung.cat, levels = rev(levels(Versorgung.cat)))) %>%
   mutate(Versorgung.cat = recode_factor(Versorgung.cat, "(0,125]"= "< 125" , 
@@ -94,7 +149,7 @@ kre.df %>%
                                         "(250,500]" = "> 250", 
                                         "(500,1e+03]" = "> 500", 
                                         "(1e+03,Inf]" = "> 1.000" )) %>%
-  as.tibble() %>%
+  # as_tibble() %>%
   group_by(Versorgung.cat) %>%
   summarise(EWZ = sum(EWZ)) %>%
     ggplot(aes(x=1, y=EWZ, fill=Versorgung.cat, weight=EWZ, label=EWZ)) +
@@ -114,11 +169,11 @@ kre.df %>%
 
 ## Die Bahnhöfe mit den 20 meisten Fernzughalten 2021
 ```{r, include=FALSE}
-head(nstops.df)
+head(nstops.fz.df)
 ```
 
 ```{r, echo=FALSE}
-nstops.df %>%
+nstops.fz.df %>%
   arrange(-n_day) %>%
   mutate(stop_name = if_else(str_starts(stop_name, "Berlin Hbf"), "Berlin Hbf", as.character(stop_name))) %>%
   group_by(stop_name) %>%
@@ -140,21 +195,20 @@ nstops.df %>%
 ```{r, echo=FALSE}
 gem.df  %>% 
   filter(EWZ>50000) %>%
-  mutate(Raumeinheit = str_replace(Raumeinheit, ", .+adt", "")) %>%
-  mutate(n.abs.sfl = n.fv.sfl + n.nv.sfl,
-         n.abs.ewz = (n.fv.ewz + n.nv.ewz)*1000) %>%
-  arrange(-n.abs.sfl) %>%
+  mutate(Raumeinheit = str_replace(GEM, ", .+adt", "")) %>%
+  mutate(halte.ges.EWZ = halte.ges.EWZ*1000) %>%
+  arrange(-halte.ges.SFL) %>%
   head(30) %>%
-  ggplot(aes(x=reorder(Raumeinheit, -order(n.abs.sfl)))) +
-    geom_point(aes(y=n.abs.sfl), color='blue')+
-    geom_line(aes(y=n.abs.sfl, group=1), color='blue')+
-    geom_point(aes(y=n.abs.ewz), color='green')+
-    geom_line(aes(y=n.abs.ewz, group=1), color='green')+
+  ggplot(aes(x=reorder(GEM, -order(halte.ges.SFL)))) +
+    geom_point(aes(y=halte.ges.SFL), color='blue')+
+    geom_line(aes(y=halte.ges.SFL, group=1), color='blue')+
+    geom_point(aes(y=halte.ges.EWZ), color='turquoise')+
+    geom_line(aes(y=halte.ges.EWZ, group=1), color='turquoise')+
     theme(axis.text.x = element_text(angle = 90, lineheight = 0.6),
           axis.text.y.left = element_text(color = 'blue'),
           axis.title.y.left = element_text(color = 'blue'),
-          axis.text.y.right = element_text(color = 'green'),
-          axis.title.y.right = element_text(color = 'green')) +
+          axis.text.y.right = element_text(color = 'turquoise'),
+          axis.title.y.right = element_text(color = 'turquoise')) +
     # ylim(c(0,2900))+
     xlab(element_blank()) +
     scale_y_continuous(name = "Fahrten je km² bebauter Fläche und Tag",
