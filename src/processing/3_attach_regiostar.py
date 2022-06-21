@@ -49,7 +49,7 @@ pd.concat([
 n_no_match = len(gem_df_merged[gem_df_merged.RegioStaR7.isna()])
 
 # write
-gem_df.to_file(gem_path,driver="GeoJSON")
+gem_df_merged.to_file(gem_path,driver="GeoJSON")
 
 # log
 
