@@ -202,10 +202,10 @@ with open(logfile,'a') as f:
     # grid
 ###############
     
-# # make a grid -- one for each sidelength, in good projection
-# # Here, all grids will be in EPSG3035, a Germany-centered EA-projection
-# from shapely.geometry import Polygon
-# import numpy as np
+# make a grid -- one for each sidelength, in good projection
+# Here, all grids will be in EPSG3035, a Germany-centered EA-projection
+from shapely.geometry import Polygon
+import numpy as np
 
 # # Germany bounding box
 # world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
