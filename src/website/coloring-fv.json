@@ -1,0 +1,73 @@
+["case",
+	[">",
+		["+",
+			["coalesce",
+				["get", "halte.fz"],
+				-1
+			],
+			["coalesce",
+				["get", "halte.fb"],
+				-1
+			]
+		],
+		200
+	],
+	["to-color", "#a28cab"],
+	[">",
+		["+",
+			["coalesce",
+					["get", "halte.fz"],
+					-1
+				],
+				["coalesce",
+					["get", "halte.fb"],
+					-1
+				]
+		],			
+		100
+	],
+	["to-color", "#bcafc0"],
+	[">",
+		["+",
+			["coalesce",
+					["get", "halte.fz"],
+					-1
+				],
+				["coalesce",
+					["get", "halte.fb"],
+					-1
+				]
+		],
+		50
+	],
+	["to-color", "#cac2cb"],
+	[">",
+		["+",
+			["coalesce",
+					["get", "halte.fz"],
+					-1
+				],
+				["coalesce",
+					["get", "halte.fb"],
+					-1
+				]
+		],
+		25
+	],
+	["to-color", "#d8d5d7"],
+	[">=",
+		["+",
+			["coalesce",
+					["get", "halte.fz"],
+					-1
+				],
+				["coalesce",
+					["get", "halte.fb"],
+					-1
+				]
+		],
+		0
+	],
+	["to-color", "#e7e8e3"],
+	["to-color", "#b3b3b3"]
+]

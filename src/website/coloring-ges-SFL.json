@@ -1,0 +1,43 @@
+["case",
+	[">",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		1000
+	],
+	["to-color", "#3da1db"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		500
+	],
+	["to-color", "#6eb6dd"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		250
+	],
+	["to-color", "#9ac8df"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		125
+	],
+	["to-color", "#c6dbe2"],
+	[">=",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		0
+	],
+	["to-color", "#e7e8e3"],
+	["to-color", "#b3b3b3"]
+]

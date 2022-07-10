@@ -1,0 +1,43 @@
+["case",
+	[">",
+		["coalesce",
+			["get", "halte.ges.EWZ"],
+			-1
+			],
+		0.4
+	],
+	["to-color", "#55a34d"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.EWZ"],
+			-1
+			],	
+		0.2
+	],
+	["to-color", "#85b97e"],
+	[">",
+			["coalesce",
+				["get", "halte.ges.EWZ"],
+				-1
+				],
+			0.1
+		],
+	["to-color", "#aecda8"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.EWZ"],
+			-1
+			],
+		0.05
+	],
+	["to-color", "#c9d9c4"],
+	[">=",
+		["coalesce",
+			["get", "halte.ges.EWZ"],
+			-1
+			],
+		0
+	],
+	["to-color", "#e7e8e3"],
+	["to-color", "#b3b3b3"]
+]

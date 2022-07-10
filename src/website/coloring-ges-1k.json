@@ -1,0 +1,28 @@
+["case",
+	[">",
+		["get","halte.ges"],
+		5000
+	],
+	["to-color", "#2d7666"],
+	[">",
+		["get","halte.ges"],
+		1000
+	],
+	["to-color", "#66998d"],
+	[">",
+		["get","halte.ges"],
+		500
+	],
+	["to-color", "#92b5aa"],
+	[">",
+		["get","halte.ges"],
+		100
+	],
+	["to-color", "#c2d1ca"],
+	[">",
+		["get","halte.ges"],
+		0
+	],
+	["to-color", "#e7e8e3"],
+	["to-color", "#b3b3b3"]
+]
