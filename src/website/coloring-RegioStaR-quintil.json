@@ -1,0 +1,88 @@
+["match",
+  ["get", "RegioStaR7"],
+	[71],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      831.907867,
+      "#efe48f",
+      1159.117539,
+      "#7cc0bd"
+    ],
+	[72],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      597.175333,
+      "#efe48f",
+      826.517040,
+      "#7cc0bd"
+    ],
+	[73],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      134.037881,
+      "#efe48f",
+      220.217882,
+      "#7cc0bd"
+    ],
+	[74],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      50.454694,
+      "#efe48f",
+      86.597848,
+      "#7cc0bd"
+    ],
+	[75],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      220.801571,
+      "#efe48f",
+      333.691106,
+      "#7cc0bd"
+    ],
+	[76],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      72.985711,
+      "#efe48f",
+      109.844569,
+      "#7cc0bd"
+    ],
+	[77],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      35.323584,
+      "#efe48f",
+      57.553644,
+      "#7cc0bd"
+    ],
+"#b3b3b3"
+]
