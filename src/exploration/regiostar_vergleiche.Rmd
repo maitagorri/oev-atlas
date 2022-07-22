@@ -1,0 +1,90 @@
+---
+title: "RegioStaR Vergleiche"
+params:
+  prefix: "20220425_fahrplaene_gesamtdeutschland_gtfs"
+output: 
+  html_document:
+    code_folding: "hide"
+---
+
+```{r}
+library(sf)
+library(ggplot2)
+library(tidyverse)
+library(smatr)
+```
+
+```{r, echo=FALSE}
+print(paste0("Verwendeter Datensatz: ", params$prefix))
+```
+
+```{r, include=FALSE}
+# Geodateien
+files = list.files("../../data/processed/",full.names = TRUE)
+
+gem.df <- st_read(files[grepl(paste0("_",params$prefix,'.','GEM'), files)][1]) %>% as.data.frame()
+# kre.df <- st_read(files[grepl(paste0("_",params$prefix,'.','KRS'), files)][1])
+```
+```{r}
+gem.df <- gem.df %>% as.data.frame()
+```
+
+
+```{r}
+stat.type = "terzil" # hier die Art der Quantile zum ausschreiben eintragen
+chars.df <- gem.df %>%
+  group_by(RegioStaR7) %>%
+  summarize(mean = mean(halte.ges.SFL, na.rm=TRUE),
+            median = median(halte.ges.SFL, na.rm=TRUE),
+            std = sd(halte.ges.SFL, na.rm = TRUE),
+            mad = mad(halte.ges.SFL, na.rm = TRUE),
+            q1 = quantile(halte.ges.SFL, 1/3, na.rm = TRUE),
+            q2 = quantile(halte.ges.SFL, 2/3, na.rm = TRUE)
+            )
+
+gem.df %>%
+  ggplot() +
+    facet_grid(rows = 'RegioStaR7') +
+    geom_histogram(aes(x=halte.ges.SFL, after_stat(density)), bins = 50) +
+    # geom_vline(data=chars.df, aes(xintercept=median)) +
+    geom_vline(data=chars.df, aes(xintercept=median), color='darkred') +
+    geom_vline(data=chars.df, aes(xintercept=median-mad), color='cornflowerblue') +
+    geom_vline(data=chars.df, aes(xintercept=median+mad), color='cornflowerblue') +
+    geom_vline(data=chars.df, aes(xintercept=q1), color='darkseagreen') +
+    geom_vline(data=chars.df, aes(xintercept=q2), color='darkseagreen') +
+    xlim(c(0,2500))
+```
+```{r}
+r = chars.df[1,]
+coloringJson <- function(s0, s1, s2){
+  sprintf('\t[%1$d],
+    ["step",
+            ["coalesce",
+              ["get", "halte.ges.SFL"],
+              -1
+            ],
+      "#e7e8e3",
+      %2$f,
+      "#efe48f",
+      %3$f,
+      "#7cc0bd"
+    ],',
+  s0, s1, s2)
+}
+
+color.strings = mutate(chars.df, color.string = coloringJson(RegioStaR7, q1, q2))$color.string
+
+# cat(paste0(color.strings, collapse = '\n'))
+
+json <- paste('["match",
+  ["get", "RegioStaR7"],',
+  paste0(color.strings, collapse = '\n'),
+  '"#b3b3b3"
+]',
+  sep='\n'
+  )
+```
+
+```{r}
+write(json, paste0("../../src/website/coloring-RegioStaR-",stat.type,".json"))
+```
