@@ -34,8 +34,8 @@ print(paste0("Verwendeter Datensatz: ", params$prefix))
 # Geodateien
 files = list.files("../../data/processed/",full.names = TRUE)
 
-gem.df <- st_read(files[grepl(paste0(params$prefix,'.','GEM'), files)][1])
-kre.df <- st_read(files[grepl(paste0(params$prefix,'.','KRS'), files)][1])
+gem.df <- st_read(files[grepl(paste0("_",params$prefix,'.','GEM'), files)][1])
+kre.df <- st_read(files[grepl(paste0("_",params$prefix,'.','KRS'), files)][1])
 ```
 
 ```{r, include=FALSE}
@@ -104,17 +104,18 @@ plot.df = gem.df  %>%
   mutate(GEM = str_replace(GEM, "Eilsleben|Harbke|Hötensleben|Sommersdorf|Ummendorf|Völpke|Wefensleben", "Obere Aller"))%>%
   mutate(GEM = if_else(SN_L==15, str_replace(GEM, "Möckern", "Möckern-Loburg-Fläming"), GEM))%>%
   group_by(GEM) %>%
-  summarise(halte.nv.SFL = weighted.mean(halte.nv.SFL, SFL), SN_L=first(SN_L)) %>%
+  summarise(halte.nv.SFL = weighted.mean(halte.nv.SFL, SFL), SN_L=first(SN_L), RegioStaR7=first(RegioStaR7)) %>%
   # mutate(Farbe = if_else(SN_L=='08', 'Baden-Württemberg', 'alles andere')) %>%
   inner_join(anteile.df, by = c("GEM" = "Untersuchungsraum")) %>%
   # mutate(n.abs.sfl = halte.nv.SFL) %>% # + n.fv.sfl) %>%
-  select(GEM, ÖV.relativ, halte.nv.SFL)#, Farbe)
+  select(GEM, ÖV.relativ, halte.nv.SFL, RegioStaR7)#, Farbe)
 ```
 
 Standardized Major Axis
 ```{r}
 library(ggpmisc)
 plot.df %>%
+  filter(RegioStaR7%in%c(71,72)) %>%
   ggplot(aes(y=ÖV.relativ, x=halte.nv.SFL, label=GEM)) +
     stat_ma_line(method = 'SMA') +
     geom_point() + #aes(color=Farbe, size = if_else(Farbe=="Baden-Württemberg",10,1))) +
@@ -130,7 +131,7 @@ plot.df %>%
             # after_stat(p.value),
             sep = "*\", \"*")),
             method = "SMA")
-
+plot.df$RegioStaR7
 ```
 
 
