@@ -1,8 +1,16 @@
 import zipfile
 import pandas as pd
+import re
+import sys
+
+# sys-input
+filename = sys.argv[1]
+zipname = re.search('([^/]+).zip', filename)[1]
+print(zipname)
 
 # Parameter
-zippath = "../../data/raw/delfi/20220425_fahrplaene_gesamtdeutschland_gtfs.zip"
+# zipname = '20220214_fahrplaene_gesamtdeutschland_gtfs'
+zippath = "../../data/raw/delfi/{}.zip".format(zipname)
 
 # file for logging
 logfile = zippath.replace('raw/delfi','interim').replace('.zip',".log")

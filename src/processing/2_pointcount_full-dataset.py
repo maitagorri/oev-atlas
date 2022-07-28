@@ -16,13 +16,19 @@ import geopandas as gpd
 import zipfile
 import re
 from datetime import datetime
+import sys
+
+# sys-input
+filename = sys.argv[1]
+zipname = re.search('([^/]+).zip', filename)[1]
+print(zipname)
 
 # Welcher Datensatz?
-zipname = '20220425_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
+# zipname = '20220214_fahrplaene_gesamtdeutschland_gtfs' # name of GTFS zipfile
 
-# Timestamp für Versionierung
-timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-print("Timestamp:\t{}".format(timestamp))
+# # Timestamp für Versionierung
+# timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+# print("Timestamp:\t{}".format(timestamp))
 
 # Welche Pfade?
 out_dir = "../../data/processed/"
@@ -33,7 +39,7 @@ raw_dir = "../../data/raw/"
 logfile = work_dir + zipname + ".log"
 with open(logfile, 'a') as f:
     f.write('## Zählung\n')
-    f.write('Timestamp: {}\n'.format(timestamp))
+    # f.write('Timestamp: {}\n'.format(timestamp))
 
 # define the points layers--these will all be included in the output, with this dictionary's keys identifying columns
 
@@ -62,15 +68,16 @@ for file in pointfiles.values():
 admin_area_file = raw_dir + 'bkg/' + 'vg250-ew_12-31.utm32s.shape.ebenen.zip'
 shapefile_names = {
     "gem":"VG250_GEM.shp",
-    "krs":"VG250_KRS.shp",
-    "lan":"VG250_LAN.shp"}
+    "krs":"VG250_KRS.shp"#,
+    # "lan":"VG250_LAN.shp"
+}
 
 # define additional information tables
 # these will depend on the names under which you saved your INKAR export
 sfl_tables= {
     "gem":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Gemeinde.csv",
-    "krs":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv",
-    "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"
+    "krs":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Kreis.csv"#,
+    # "lan":raw_dir + 'inkar/' + "Tabelle_Siedlungsflaeche_Land.csv"
             }
 
 
@@ -189,7 +196,8 @@ with open(logfile,'a') as f:
         # process
         agg_gdf = aggregateShapes(area_gdf, pointfiles, level)
         # write out:
-        out_file = timestamp + '_' + zipname + "." + level.upper() +".geojson"
+        # out_file = timestamp + '_' + zipname + "." + level.upper() +".geojson"
+        out_file = zipname + "." + level.upper() +".geojson"
         agg_gdf.to_file(out_dir + out_file, driver="GeoJSON")
         print("Wrote " + out_file)
         f.write("\t".join(pointfiles).upper() + "\n")
@@ -207,17 +215,17 @@ with open(logfile,'a') as f:
 from shapely.geometry import Polygon
 import numpy as np
 
-# # Germany bounding box
-# world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
-# germany = world[world.name == "Germany"] 
+# Germany bounding box
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres')).to_crs('epsg:3035')
+germany = world[world.name == "Germany"] 
 # germany['geometry'] = germany.geometry.buffer(50000)#50k buffer
-# germany = germany.to_crs('epsg:4326') # we are in 43
+germany = germany.to_crs('epsg:4326') # we are in 43
 
 # # Convex hull bounding box __around Germany__              
 
-# stopspace = gpd.GeoDataFrame({'geometry':[germany.unary_union.convex_hull]}, crs="epsg:4326")
+stopspace = gpd.GeoDataFrame({'geometry':[germany.unary_union.convex_hull]}, crs="epsg:4326")
 
-# sls = [5, 1] # sidelengths of desired grids in kilometers
+sls = [5, 1] # sidelengths of desired grids in kilometers
 
 # def make_grid(scale, stopspace):   
 #     # scale is a sidelength in km
@@ -250,66 +258,67 @@ import numpy as np
 #     grid = grid[~gpd.sjoin(grid, stopspace, how='left', op='intersects')["index_right"].isna()] 
 #     return(grid.to_crs("epsg:4326"))
 
-# def aggregateGrid(grid_gdf, ncounts_gdf, scope):
-#     print("Getting " + scope + " counts for grid with " + str(len(grid_gdf)) + " polygons")
+def aggregateGrid(grid_gdf, ncounts_gdf, scope):
+    print("Getting " + scope + " counts for grid with " + str(len(grid_gdf)) + " polygons")
     
-#     agg_counts_gdf = grid_gdf.to_crs('epsg:4326')
-#     ## get sum of stuff in each AGS
-#     agg_counts_gdf = gpd.sjoin(agg_counts_gdf, 
-#                                ncounts_gdf[["n_day","geometry"]].to_crs('epsg:4326'), 
-#                                how="left", 
-#                                op="contains" # spatial join
-#                        ).drop("index_right",axis=1
-#                        ).reset_index(
-#                        ).dissolve(by="index",aggfunc='sum'
-#                        ).rename({"n_day":"n."+scope},axis=1)
-#     agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].drop(columns='geometry')
-#         # reset index to geometry for easier joining of different counts across grid later
-#     return(agg_counts_gdf)
+    agg_counts_gdf = grid_gdf.to_crs('epsg:4326')
+    ## get sum of stuff in each AGS
+    agg_counts_gdf = gpd.sjoin(agg_counts_gdf, 
+                               ncounts_gdf[["n_day","geometry"]].to_crs('epsg:4326'), 
+                               how="left", 
+                               op="contains" # spatial join
+                       ).drop("index_right",axis=1
+                       ).reset_index(
+                       ).dissolve(by="index",aggfunc='sum'
+                       ).rename({"n_day":"n."+scope},axis=1)
+    agg_counts_gdf = agg_counts_gdf[agg_counts_gdf['n.'+scope]>0].drop(columns='geometry')
+        # reset index to geometry for easier joining of different counts across grid later
+    return(agg_counts_gdf)
     
 
-# # Read in point files (as dictionary)
-# def pointfileReader(filepath, stopspace):
-#     points = pd.read_csv(filepath)
-#     points_gdf = gpd.GeoDataFrame(points,
-#                                   geometry = gpd.points_from_xy(points.stop_lon, 
-#                                                                 points.stop_lat),
-#                                   crs="epsg:4326").to_crs("epsg:4326")
-#     points_gdf = gpd.sjoin(points_gdf, stopspace[['geometry']], how="inner", op="within" # spatial join
-#                         )
-#     return(points_gdf)
+# Read in point files (as dictionary)
+def pointfileReader(filepath, stopspace):
+    points = pd.read_csv(filepath)
+    points_gdf = gpd.GeoDataFrame(points,
+                                  geometry = gpd.points_from_xy(points.stop_lon, 
+                                                                points.stop_lat),
+                                  crs="epsg:4326").to_crs("epsg:4326")
+    points_gdf = gpd.sjoin(points_gdf, stopspace[['geometry']], how="inner", op="within" # spatial join
+                        )
+    return(points_gdf)
     
-# # Make grids
+# Make grids
 # grids = {s:make_grid(s,germany) for s in sls}
-# # get pointfiles ready
-# points = {k:pointfileReader(pointfiles[k], germany) for k in pointfiles}
+grids = {s: gpd.read_file(work_dir + '{}k.geojson'.format(s)) for s in sls}
+# get pointfiles ready
+points = {k:pointfileReader(pointfiles[k], germany) for k in pointfiles}
 
 
-# # For each scale, aggregate all the different count files across grid, then concatenate
-# countgrids = { 
-#     scale:pd.concat(                  # concatenating the different scope counts of one grid
-#         [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
-#                        points[scope], 
-#                        scope) 
-#          for scope in pointfiles      # for all scopes/different input count files
-#         ],
-#         axis=1
-#     ).join(grids[scale]               # getting the geometry column back 
-#     )
-#     for scale in sls                  # for all different grid scales
-# }
+# For each scale, aggregate all the different count files across grid, then concatenate
+countgrids = { 
+    scale:pd.concat(                  # concatenating the different scope counts of one grid
+        [aggregateGrid(grids[scale],  # aggregating given scope counts on grid
+                       points[scope], 
+                       scope) 
+         for scope in pointfiles      # for all scopes/different input count files
+        ],
+        axis=1
+    ).join(grids[scale]               # getting the geometry column back 
+    )
+    for scale in sls                  # for all different grid scales
+}
 
-# # Add total count to each grid
+# Add total count to each grid
 
-# for scale in countgrids:
-#     countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
+for scale in countgrids:
+    countgrids[scale]['n.ges'] = countgrids[scale][['n.'+scope for scope in pointfiles]].sum(axis=1)
 
     
-#     # write out:
-# for scale in sls:
-#     out_file = zipname + "_" + str(scale) +"k.geojson"
-#     print("Writing "+ out_file)
-#     countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
+    # write out:
+for scale in sls:
+    out_file = zipname + "_" + str(scale) +"k.geojson"
+    print("Writing "+ out_file)
+    countgrids[scale].to_file(out_dir + out_file,driver="GeoJSON")
     
     
 ###### Checking    
