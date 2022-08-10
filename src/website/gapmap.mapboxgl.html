@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Prototyp MapboxGL v0.4 (basiert auf agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg)</title>
+<title>ÖV-Atlas v1.0 (basiert auf agora-verkehrswende/cl6ndtrj900b716pknw291zq3)</title>
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css" rel="stylesheet"></link>
@@ -59,7 +59,8 @@ body { margin: 0; padding: 0; }
 <body>
     <style>
         .legend {
-            width: 96px;
+            /* width: 96px;*/
+            display: inline-block;
             background-color: #fff;
             border-radius: 3px;
             bottom: 30px;
@@ -87,17 +88,17 @@ body { margin: 0; padding: 0; }
 <div id="map"></div>
 
 <div id="sf-legend" class="legend" style="display: none">
-    <h4>Abfahrten je km² Siedlungsfläche (&Oslash; pro Tag)</h4>
+    <h4>Abfahrten je km² bebauter Fläche<br>(&Oslash; pro Tag)</h4>
     <div><span style="background-color: #e7e8e3"></span>&#8805; 0</div>
-    <div><span style="background-color: #c6dbe2"></span>> 125</div>
-    <div><span style="background-color: #9ac8df"></span>> 250</div>
-    <div><span style="background-color: #6eb6dd"></span>> 500</div>
+    <div><span style="background-color: #c6dbe2"></span>> 75</div>
+    <div><span style="background-color: #9ac8df"></span>> 150</div>
+    <div><span style="background-color: #6eb6dd"></span>> 300</div>
     <div><span style="background-color: #3da1db"></span>> 1 000 </div>
     <div><span style="background-color: #b3b3b3"></span>k.A.</div>
 </div>
  
 <div id="ew-legend" class="legend" style="display: none">
-    <h4>Abfahrten je Einwohner</h4>
+    <h4>Abfahrten je Einwohner<br>(&Oslash; pro Tag)</h4>
     <div><span style="background-color: #e7e8e3"></span>&#8805; 0</div>
     <div><span style="background-color: #c9d9c4"></span>> 50</div>
     <div><span style="background-color: #aecda8"></span>> 100</div>
@@ -107,7 +108,7 @@ body { margin: 0; padding: 0; }
 </div>
 
 <div id="raster-legend" class="legend" style="display: none">
-    <h4>Abfahrten je km²</h4>
+    <h4>Abfahrten je km²<br>(&Oslash; pro Tag)</h4>
     <div><span style="background-color: #e7e8e3"></span>&#8805; 0</div>
     <div><span style="background-color: #c2d1ca"></span>> 100</div>
     <div><span style="background-color: #92b5aa"></span>> 500</div>
@@ -116,7 +117,7 @@ body { margin: 0; padding: 0; }
 </div>
 
 <div id="fv-legend" class="legend" style="display: none">
-    <h4>Fernverkehrsabfahrten je Gemeinde</h4>
+    <h4>Fernverkehrsabfahrten je Gemeinde<br>(&Oslash; pro Tag)</h4>
     <div><span style="background-color: #e7e8e3"></span>&#8805; 0</div>
     <div><span style="background-color: #d8d5d7"></span>> 25</div>
     <div><span style="background-color: #cac2cb"></span>> 50</div>
@@ -124,11 +125,20 @@ body { margin: 0; padding: 0; }
     <div><span style="background-color: #a28cab"></span>> 200</div>
 </div>
 
+
+<div id="raumtyp-legend" class="legend" style="display: none">
+    <h4>Abfahrten je bebauter Fläche &ndash;<br>Vergleich gleicher Raumtypen</h4>
+    <div><span style="background-color: #e7e8e3"></span>Niedriger (1.-2. Fünftel)</div>
+    <div><span style="background-color: #efe48f"></span>Durchschnittlich (3. Fünftel)</div>
+    <div><span style="background-color: #7cc0bd"></span>Höher (4.-5. Fünftel)</div>
+    <div><span style="background-color: #b3b3b3"></span>k.A.</div>
+</div>
+
 <script>
 	mapboxgl.accessToken = 'pk.eyJ1IjoiYWdvcmEtdmVya2VocnN3ZW5kZSIsImEiOiJja21uZnp4bmYxdWhnMm9rNTM3ZGp6N2UwIn0.MV8aPUwbFN-D3IP5dtKfQg';
     var map = new mapboxgl.Map({
         container: 'map', // container id
-        style: 'mapbox://styles/agora-verkehrswende/ckny9z3563u1g17jgl3bk9tfg', // style URL
+        style: 'mapbox://styles/agora-verkehrswende/cl6ndtrj900b716pknw291zq3', // style URL
         center: [9.671,51.237], // starting position [lng, lat]
         zoom: 5.5, // starting zoom
         /*maxBounds: [
@@ -141,18 +151,20 @@ body { margin: 0; padding: 0; }
 
 // hier ist die Reihenfolge wichtig!!
 
-    var legendId = {'Abfahrten je bebauter Fläche':'sf-legend', 
-                         'Abfahrten je Einwohner':'ew-legend',                         
-                         'Abfahrten je Fläche (Raster)':'raster-legend',
-                         'Nur Fernverkehr':'fv-legend'
+    var legendId = {'Abfahrten je bebauter Fläche':'sf-legend',
+    								'Abfahrten je Einwohner':'ew-legend',                         
+		                'Abfahrten je Fläche (Raster)':'raster-legend',
+		                'Abfahrten im Fernverkehr':'fv-legend',
+		                'Vergleich innerhalb desselben Raumtyps':'raumtyp-legend'
     }
     
     // what a hack--future: structure legends, ids, button text and layer groups properly
     var contentTitles = Object.keys(legendId)
-    var contentLayerGroups = [['SF Land','SF Gemeinde','SF Kreis', 'SF Null'], 
-                              ['EW Land','EW Kreis','EW Gemeinde', 'EW Null'],
-                               ['Raster-5km','Raster-1km'],
-                                ['FV Gemeinde simp','FV Gemeinde'] // Philipp hat Layer FV Kreis ersetzt durch FV Gemeinde simp
+    var contentLayerGroups = [['SF Gemeinde','SF Kreis'], 
+                              ['EW Kreis','EW Gemeinde'],
+                              ['Raster-5km','Raster-1km'],                              
+                              ['FV Gemeinde', 'FV Gemeinde simp'], // Philipp hat Layer FV Kreis ersetzt durch FV Gemeinde simp
+                              ['SF Raumtyp Gemeinde', 'SF Raumtyp Gemeinde simp']
                                
                             ]
     var contentLayers = [].concat(...contentLayerGroups)
@@ -243,8 +255,37 @@ map.once('style.load', function() {
     document.getElementById('menu').firstChild.click()
 })
 
-
-    
+// Create a popup, but don't add it to the map yet.
+const popup = new mapboxgl.Popup({
+	closeButton: false,
+	closeOnClick: false
+});
+/* 
+map.on('mouseenter', 'places', (e) => {
+	// Change the cursor style as a UI indicator.
+	map.getCanvas().style.cursor = 'pointer';
+	 
+	// Copy coordinates array.
+	const coordinates = e.features[0].geometry.coordinates.slice();
+	const description = e.features[0].properties.description;
+	 
+	// Ensure that if the map is zoomed out such that multiple
+	// copies of the feature are visible, the popup appears
+	// over the copy being pointed to.
+	while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+		coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+	}
+	 
+	// Populate the popup and set its coordinates
+	// based on the feature found.
+	popup.setLngLat(coordinates).setHTML(n.ges).addTo(map);
+});
+ 
+map.on('mouseleave', 'places', () => {
+	map.getCanvas().style.cursor = '';
+	popup.remove();
+});
+   */ 
 </script>
 
 </body>
