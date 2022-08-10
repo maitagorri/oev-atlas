@@ -4,33 +4,41 @@
 			["get", "halte.ges.SFL"],
 			-1
 		],
-		1000
+		900
 	],
-	["to-color", "#3da1db"],
+	["to-color", "#3DA1DB"],
 	[">",
 		["coalesce",
 			["get", "halte.ges.SFL"],
 			-1
 		],
-		500
+		600
 	],
-	["to-color", "#6eb6dd"],
+	["to-color", "#5FAFDD"],
 	[">",
 		["coalesce",
 			["get", "halte.ges.SFL"],
 			-1
 		],
-		250
+		300
 	],
-	["to-color", "#9ac8df"],
+	["to-color", "#81BDDE"],
 	[">",
 		["coalesce",
 			["get", "halte.ges.SFL"],
 			-1
 		],
-		125
+		150
 	],
-	["to-color", "#c6dbe2"],
+	["to-color", "#A3CCE0"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.SFL"],
+			-1
+		],
+		75
+	],
+	["to-color", "#C5DAE1"],
 	[">=",
 		["coalesce",
 			["get", "halte.ges.SFL"],

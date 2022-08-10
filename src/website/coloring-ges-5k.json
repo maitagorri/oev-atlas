@@ -4,7 +4,7 @@
 			["get","halte.ges"],
 			25
 			],
-		5000
+		1600
 	],
 	["to-color", "#2d7666"],
 	[">",
@@ -12,25 +12,41 @@
 			["get","halte.ges"],
 			25
 			],
-		1000
+		900
 	],
-	["to-color", "#66998d"],
+	["to-color", "#528D7F"],
 	[">",
 		["/",
 			["get","halte.ges"],
 			25
 			],
-		500
+		600
 	],
-	["to-color", "#92b5aa"],
+	["to-color", "#77A498"],
 	[">",
 		["/",
 			["get","halte.ges"],
 			25
 			],
-		100
+		300
 	],
-	["to-color", "#c2d1ca"],
+	["to-color", "#9DBAB1"],
+	[">",
+		["/",
+			["get","halte.ges"],
+			25
+			],
+		150
+	],
+	["to-color", "#B5CAC2"],
+	[">",
+		["/",
+			["get","halte.ges"],
+			25
+			],
+		75
+	],
+	["to-color", "#CED9D2"],
 	[">",
 		["/",
 			["get","halte.ges"],

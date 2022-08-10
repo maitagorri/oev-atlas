@@ -4,33 +4,41 @@
 			["get", "halte.ges.EWZ"],
 			-1
 			],
-		0.4
+		0.3
 	],
 	["to-color", "#55a34d"],
 	[">",
 		["coalesce",
 			["get", "halte.ges.EWZ"],
 			-1
-			],	
+			],
 		0.2
 	],
-	["to-color", "#85b97e"],
+	["to-color", "#72B16B"],
+	[">",
+		["coalesce",
+			["get", "halte.ges.EWZ"],
+			-1
+			],	
+		0.1
+	],
+	["to-color", "#8FBF89"],
 	[">",
 			["coalesce",
 				["get", "halte.ges.EWZ"],
 				-1
 				],
-			0.1
+			0.05
 		],
-	["to-color", "#aecda8"],
+	["to-color", "#ADCCA7"],
 	[">",
 		["coalesce",
 			["get", "halte.ges.EWZ"],
 			-1
 			],
-		0.05
+		0.025
 	],
-	["to-color", "#c9d9c4"],
+	["to-color", "#CADAC5"],
 	[">=",
 		["coalesce",
 			["get", "halte.ges.EWZ"],
