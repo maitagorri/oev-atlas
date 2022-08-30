@@ -1,0 +1,33 @@
+CODEBOOK,,
+Variable,Typ,Beschreibung
+LAN (nur in LAN-Datensatz),str,Bundesland
+KRS (nur in KRS-Datensatz),str,Kreis 
+GEM (nur in GEM-Datensatz),str,Gemeinde 
+AGS,str,Amtlicher Gemeindeschlüssel
+EWZ,int,Einwohnerzahl 
+KFL,float,Katasterfläche 
+SFL,float,Siedlungs- und Verkehrsfläche 
+RegioStaR7 (nur in GEM-Datensatz),int,Raumtyp nach RegioStaR7
+fehlerhaft,int,"1 bei fehlerhaften Geographien, sonst 0"
+halte.ges,float,"Halte je Tag, gesamt"
+halte.fz,float,Halte von Fernzügen je Tag 
+halte.fb,float,Halte von Fernbussen je Tag 
+halte.nv,float,Halte im Nah- und Regionalverkehr je Tag 
+halte.ges.EWZ,float,Halte je Tag pro EWZ 
+halte.ges.SFL,float,Halte je Tag pro SFL 
+halte.fz.EWZ,float,Halte von Fernzügen je Tag und EWZ 
+halte.fz.SFL,float,Halte von Fernzügen je Tag und SFL 
+halte.fb.SFL,float,Halte von Fernbussen je Tag und SFL 
+halte.fb.EWZ,float,Halte von Fernbussen je Tag und EWZ 
+halte.nv.EWZ,float,Halte im Nah- und Regionalverkehr je Tag und EWZ 
+halte.nv.SFL,float,Halte im Nah- und Regionalverkehr je Tag und SFL 
+,,
+METADATEN,,
+Titel,Zähldaten ÖV-Atlas v1.2,
+Dateiname,20220802-160705_3-med.[EBENE].geojson,
+Version,20220802-160705,
+Beschreibung,Geographien und Zähldaten für Kreise und Gemeinden aus DELFI-Datensätzen vom 14.2. bis 1.8. 2022 (Maximum des gleitenden Medians mit Fenstergröße=3 für jede enthaltene Geographie),
+Startdatum,31.01.2022,
+Enddatum,10.12.2022,
+Bekannte Fehler,(keine),
+Zitieren als,Agora Verkehrswende (2022): ÖV-Atlas Deutschland 2022. Datensatz v20220802-160705,
