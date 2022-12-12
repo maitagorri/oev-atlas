@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ÖV-Atlas v1.2 (basiert auf agora-verkehrswende/cl6ndtrj900b716pknw291zq3)</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css" rel="stylesheet"></link>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+#menu {
+    min-width: 93px;
+    background: #fff;
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    left: 10px;
+    border-radius: 3px;
+    /*width: 20%;*/
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    font-family: 'Open Sans', sans-serif;
+    }
+     
+    #menu a {
+    font-size: 13px;
+    color: #404040;
+    display: block;
+    margin: 0;
+    padding: 0;
+    padding: 10px;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+    text-align: center;
+    }
+     
+    #menu a:last-child {
+    border: none;
+    }
+     
+ /*   #menu a:hover {
+    background-color: #f8f8f8;
+    color: #404040;
+    }
+
+    #menu a.active {
+    background-color: #006aab;
+    color: #ffffff;
+    }
+     
+    #menu a.active:hover {
+    background: #004899; 
+       */  
+}
+
+
+[id='Fahrten je bebauter Fläche']:hover {
+	background-color: #C5DAE1;
+	color: #ffffff;
+	}
+[id='Fahrten je bebauter Fläche'].active {
+	background-color: #5FAFDD;
+	color: #ffffff;
+	}
+[id='Fahrten je bebauter Fläche'].active:hover {
+	background-color: #3DA1DB;
+	color: #ffffff;
+	}
+
+[id='Fahrten je Einwohner']:hover {
+	background-color: #CADAC5;
+	color: #ffffff;
+	}
+[id='Fahrten je Einwohner'].active {
+	background-color: #72B16B;
+	color: #ffffff;
+	}
+[id='Fahrten je Einwohner'].active:hover {
+	background-color: #55a34d;
+	color: #ffffff;
+	}
+	
+[id='Fahrten je Fläche (Raster)']:hover {
+	background-color: #CED9D2;
+	color: #ffffff;
+	}
+[id='Fahrten je Fläche (Raster)'].active {
+	background-color: #528D7F;
+	color: #ffffff;
+	}
+[id='Fahrten je Fläche (Raster)'].active:hover {
+	background-color: #2D7666;
+	color: #ffffff;
+	}
+	
+[id='Vergleich nach Raumtyp']:hover {
+	background-color: #c0d6c6;
+	color: #ffffff;
+	}
+[id='Vergleich nach Raumtyp'].active {
+	background-color: #99c9bd;
+	color: #ffffff;
+	}
+[id='Vergleich nach Raumtyp'].active:hover {
+	background-color: #7cc0bd;
+	color: #ffffff;
+	}
+	
+[id='Fahrten im Fernverkehr']:hover {
+	background-color: #D9D6D8;
+	color: #ffffff;
+	}
+[id='Fahrten im Fernverkehr'].active {
+	background-color: #B09EB6;
+	color: #ffffff;
+	}
+[id='Fahrten im Fernverkehr'].active:hover {
+	background-color: #a28cab;
+	color: #ffffff;
+	}
+	
+[id='Fahrten von Fernbussen']:hover {
+	background-color: #D9D6D8;
+	color: #ffffff;
+	}
+[id='Fahrten von Fernbussen'].active {
+	background-color: #B09EB6;
+	color: #ffffff;
+	}
+[id='Fahrten von Fernbussen'].active:hover {
+	background-color: #a28cab;
+	color: #ffffff;
+	}
+	
+[id='Fahrten von Fernzügen']:hover {
+	background-color: #D9D6D8;
+	color: #ffffff;
+	}
+[id='Fahrten von Fernzügen'].active {
+	background-color: #B09EB6;
+	color: #ffffff;
+	}
+[id='Fahrten von Fernzügen'].active:hover {
+	background-color: #a28cab;
+	color: #ffffff;
+	}
+
+
+</style>
+</head>
+<body>
+    <style>
+        .legend {
+            /* width: 96px;*/
+            display: inline-block;
+            background-color: #fff;
+            border-radius: 3px;
+            bottom: 30px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            padding: 10px;
+            position: absolute;
+            left: 10px;
+            z-index: 1;
+            }
+         
+        .legend h4 {
+            margin: 0 0 10px;   
+            }
+         
+        .legend div span {
+            border-radius: 50%;
+            display: inline-block;
+            height: 10px;
+            margin-right: 5px;
+            width: 10px;
+            }
+    </style>
+<nav id="menu"></nav>
+<div id="map"></div>
+
+<div id="sf-legend" class="legend" style="display: none">
+    <h4>Fahrten je km² Siedlungs-<br>und Verkehrsfläche und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;0  kaum vorhanden</div>
+    <div><span style="background-color: #C5DAE1"></span>>  &nbsp;&nbsp;75  sehr schlecht 	(ca. 2h-Takt)</div>
+    <div><span style="background-color: #A3CCE0"></span>> 150  schlecht 	(ca. 1h-Takt)</div>
+    <div><span style="background-color: #81BDDE"></span>> 300  befriedigend 	(ca. 30-Min.-Takt)</div>
+    <div><span style="background-color: #5FAFDD"></span>> 600  gut 		(ca. 15-Min.-Takt)</div>
+    <div><span style="background-color: #5FAFDD"></span>> 900  sehr gut 	(ca. 10-Min.-Takt)</div>
+    <div><span style="background-color: #b3b3b3"></span>Daten unvollständig / fehlerhaft</div>
+</div>
+
+<div id="raster-legend" class="legend" style="display: none">
+    <h4>Fahrten je km² und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0  kaum vorhanden</div>
+    <div><span style="background-color: #CED9D2"></span>>  &nbsp;&nbsp;&nbsp;&nbsp;75  sehr schlecht 	(ca. 2h-Takt)</div>
+    <div><span style="background-color: #B5CAC2"></span>> &nbsp;&nbsp;150  schlecht 	(ca. 1h-Takt)</div>
+    <div><span style="background-color: #9DBAB1"></span>> &nbsp;&nbsp;300  befriedigend 	(ca. 30-Min.-Takt)</div>
+    <div><span style="background-color: #77A498"></span>> &nbsp;&nbsp;600  gut 		(ca. 15-Min.-Takt)</div>
+    <div><span style="background-color: #528D7F"></span>> &nbsp;&nbsp;900  sehr gut 	(ca. 10-Min.-Takt)</div>
+    <div><span style="background-color: #2D7666"></span>> 1600 hervorragend (ca. 5-Min.-Takt)</div>
+    <div><span style="background-color: #b3b3b3"></span>Daten unvollständig / fehlerhaft</div>
+</div>
+ 
+<div id="ew-legend" class="legend" style="display: none">
+    <h4>Fahrten je 1.000 Einwohner<br>und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;0</div>
+    <div><span style="background-color: #CADAC5"></span>> &nbsp;&nbsp;25</div>
+    <div><span style="background-color: #ADCCA7"></span>> &nbsp;&nbsp;50</div>
+    <div><span style="background-color: #8FBF89"></span>> 100</div>
+    <div><span style="background-color: #72B16B"></span>> 200</div>
+    <div><span style="background-color: #55a34d"></span>> 300</div>
+    <div><span style="background-color: #b3b3b3"></span>Daten unvollständig / fehlerhaft</div>
+</div>
+
+<div id="fv-legend" class="legend" style="display: none">
+    <h4>Fernverkehrsfahrten je Gemeinde<br>und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;0</div>
+    <div><span style="background-color: #d8d5d7"></span>> &nbsp;&nbsp;25</div>
+    <div><span style="background-color: #cac2cb"></span>> &nbsp;&nbsp;50</div>
+    <div><span style="background-color: #bcafc0"></span>> 100</div>
+    <div><span style="background-color: #a28cab"></span>> 200</div>
+</div>
+
+
+<div id="fz-legend" class="legend" style="display: none">
+    <h4>Fernzugfahrten je Gemeinde<br>und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;0</div>
+    <div><span style="background-color: #d8d5d7"></span>> &nbsp;&nbsp;25</div>
+    <div><span style="background-color: #cac2cb"></span>> &nbsp;&nbsp;50</div>
+    <div><span style="background-color: #bcafc0"></span>> 100</div>
+    <div><span style="background-color: #a28cab"></span>> 200</div>
+</div>
+
+<div id="fb-legend" class="legend" style="display: none">
+    <h4>Fernbusfahrten je Gemeinde<br>und Tag</h4>
+    <div><span style="background-color: #e7e8e3"></span>&#8805; &nbsp;&nbsp;&nbsp;&nbsp;0</div>
+    <div><span style="background-color: #d8d5d7"></span>> &nbsp;&nbsp;25</div>
+    <div><span style="background-color: #cac2cb"></span>> &nbsp;&nbsp;50</div>
+    <div><span style="background-color: #bcafc0"></span>> 100</div>
+    <div><span style="background-color: #a28cab"></span>> 200</div>
+</div>
+
+
+<div id="raumtyp-legend" class="legend" style="display: none">
+    <h4>Fahrtendichte im Vergleich zu<br>Gemeinden des gleichen Raumtyps<br>(RegioStaR7)</h4>
+    <div><span style="background-color: #e7e8e3"></span>niedriger (1.-2. Fünftel)</div>
+    <div><span style="background-color: #efe48f"></span>durchschnittlich (mittleres Fünftel)</div>
+    <div><span style="background-color: #7cc0bd"></span>höher (4.-5. Fünftel)</div>
+    <div><span style="background-color: #b3b3b3"></span>Daten unvollständig / fehlerhaft</div>
+</div>
+
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoiYWdvcmEtdmVya2VocnN3ZW5kZSIsImEiOiJja21uZnp4bmYxdWhnMm9rNTM3ZGp6N2UwIn0.MV8aPUwbFN-D3IP5dtKfQg';
+    var map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/agora-verkehrswende/cl6ndtrj900b716pknw291zq3', // style URL
+        center: [9.671,51.237], // starting position [lng, lat]
+        zoom: 5.5, // starting zoom
+        /*maxBounds: [
+            [0, 43.97],
+            [23.52, 60.11],
+        ],*/
+        minZoom: 4,
+    preserveDrawingBuffer: true
+    });
+
+// hier ist die Reihenfolge wichtig!!
+
+    var legendId = {'Fahrten je bebauter Fläche':'sf-legend',               
+		                'Fahrten je Fläche (Raster)':'raster-legend',
+    								'Fahrten je Einwohner':'ew-legend',          
+		                'Vergleich nach Raumtyp':'raumtyp-legend',
+		                'Fahrten im Fernverkehr':'fv-legend',
+		                'Fahrten von Fernbussen':'fb-legend',
+		                'Fahrten von Fernzügen':'fz-legend'
+    }
+    
+    var buttonColors = ['3DA1DB',
+    										'2D7666',
+    										'55a34d',
+    										'7CC0BD',
+    										'a28cab',
+    										'a28cab',
+    										'a28cab'
+    										]
+
+    
+    // what a hack--future: structure legends, ids, button text and layer groups properly
+    var contentTitles = Object.keys(legendId)
+    var contentLayerGroups = [['SF Gemeinde','SF Kreis','keine Daten'], 
+                              ['Raster-5km','Raster-1km','keine Daten'], 
+                              ['EW Kreis','EW Gemeinde','keine Daten'],
+                              ['SF Raumtyp Gemeinde', 'SF Raumtyp Gemeinde simp','keine Daten'],                              
+                              ['FV Gemeinde', 'FV Gemeinde simp'],                      
+                              ['FB Gemeinde', 'FB Gemeinde simp'],                      
+                              ['FZ Gemeinde', 'FZ Gemeinde simp']
+                               
+                            ]
+    var contentLayers = [].concat(...contentLayerGroups)
+    
+    //whatever layers you want to toggle go in to this function
+
+    function addToggleLayer(ids, name, color) {
+        var link = document.createElement('a');
+        link.href = '#';
+        link.id = name;
+        link.className = '';
+        link.textContent = name;
+
+        link.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.className === 'active') {
+                // turn off these layers
+                ids.forEach(layerId => {
+                    map.setLayoutProperty(layerId, 'visibility', 'none')
+                    });
+                // turn off this legend
+                    document.getElementById(legendId[name]).style = "display: none"
+                // turn off this button
+                this.className = '';
+                } else {
+                    // turn off other layers
+                    contentLayers.forEach(otherId => {
+                        if (!ids.includes(otherId)){
+                            map.setLayoutProperty(otherId, 'visibility', 'none')
+                        }})
+                    // turn off other legends
+                    contentTitles.forEach(otherTitle =>{
+                        if (otherTitle != name){
+                            otherLegend = document.getElementById(legendId[otherTitle])
+                            otherLegend.style = "display: none"
+                        }
+                    })
+                    // turn off other buttons
+                    var buttons = document.getElementById('menu').childNodes;
+                    buttons.forEach(button => {
+                        if (button.textContent!=name){
+                            button.className = '';
+                        }})
+                    // turn on these layers
+                    ids.forEach(layerId => {
+                        map.setLayoutProperty(layerId, 'visibility', 'visible');
+                    });
+                    // turn on this legend
+                    document.getElementById(legendId[name]).style = ''
+                    // turn on this button
+                    this.className = 'active';
+                };
+            };
+        var layerMenu = document.getElementById('menu');
+        layerMenu.appendChild(link);
+    }
+
+map.addControl(new mapboxgl.NavigationControl());
+
+//set all layers invisible to start
+map.once('style.load', function() {
+    // make all layers invisible
+    contentLayers.forEach(layerId => {
+        map.setLayoutProperty(layerId, 'visibility', 'none');
+    });
+
+    // set up layer buttons
+    contentLayerGroups.forEach((layerGroup, index) => {
+        const name = contentTitles[index];
+        const color = buttonColors[index];
+        addToggleLayer(layerGroup, name, color);
+    });
+    
+    // turn on starting group
+    document.getElementById('Fahrten je Fläche (Raster)').click();
+    
+    // set zoom
+    map.setZoom(10)
+    map.setCenter([10.045,53.557])
+})
+/*
+// Create a popup, but don't add it to the map yet.
+const popup = new mapboxgl.Popup({
+	closeButton: false,
+	closeOnClick: false
+});
+
+map.on('mousemove', (e) => {
+const features = map.queryRenderedFeatures(e.point);
+ 
+// Limit the number of properties we're displaying for
+// legibility and performance
+const displayProperties = [
+'type',
+'properties',
+'id'
+];
+ 
+const displayFeatures = features.map((feat) => {
+	const displayFeat = {};
+		displayProperties.forEach((prop) => {
+			displayFeat[prop] = feat[prop];
+		});
+	return displayFeat;
+});
+ 
+console.log(displayFeatures)
+
+}) */
+
+// When a click event occurs on a feature in the states layer,
+// open a popup at the location of the click, with description
+// HTML from the click event's properties.
+map.on('click', 'SF Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten je km²: ',
+														e.features[0].properties['halte.ges.SFL'].toFixed(0)))
+.addTo(map);
+});
+
+/*
+map.on('click', 'SF Kreis', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Kreis: '.concat(e.features[0].properties.KRS,
+														'<br>', 
+														'Fahrten je km²: ',
+														e.features[0].properties['halte.ges.SFL'].toFixed(0)))
+.addTo(map);
+});
+*/
+
+map.on('click', 'EW Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten je 1.000 Einwohner: ',
+														(e.features[0].properties['halte.ges.EWZ']*1000).toFixed(0)))
+.addTo(map);
+});
+
+/*
+map.on('click', 'EW Kreis', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.KRS,
+														'<br>', 
+														'Fahrten je 1.000 Einwohner: ',
+														(e.features[0].properties['halte.ges.EWZ']*1000).toFixed(0)))
+.addTo(map);
+});
+*/
+
+
+map.on('click', 'Raster-5km', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Fahrten je km²: '.concat((e.features[0].properties['halte.ges']/25).toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'Raster-1km', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Fahrten je km²: '.concat(e.features[0].properties['halte.ges'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'SF Raumtyp Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.ges.SFL'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'SF Raumtyp Gemeinde simp', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten je km²: ',
+														e.features[0].properties['halte.ges.SFL'].toFixed(0),
+														'<br>',
+														'Raumtyp: ',
+														e.features[0].properties['RegioStaR7'].toFixed(0)
+														))
+.addTo(map);
+});
+
+map.on('click', 'FV Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fv'].toFixed(0),
+														'<br>',
+														'Raumtyp: ',
+														e.features[0].properties['RegioStaR7'].toFixed(0)
+														))
+.addTo(map);
+});
+
+map.on('click', 'FV Gemeinde simp', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fv'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'FZ Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fz'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'FZ Gemeinde simp', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fz'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'FB Gemeinde', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fb'].toFixed(0)))
+.addTo(map);
+});
+
+map.on('click', 'FB Gemeinde simp', (e) => {
+new mapboxgl.Popup()
+.setLngLat(e.lngLat)
+.setHTML('Gemeinde: '.concat(e.features[0].properties.GEM,
+														'<br>', 
+														'Fahrten: ',
+														e.features[0].properties['halte.fb'].toFixed(0)))
+.addTo(map);
+});
+ 
+// Change the cursor to a pointer when
+// the mouse is over the states layer.
+map.on('mouseenter', 'Staaten-Null', () => {
+map.getCanvas().style.cursor = 'pointer';
+});
+ 
+// Change the cursor back to a pointer
+// when it leaves the states layer.
+map.on('mouseleave', 'Staaten-Null', () => {
+map.getCanvas().style.cursor = '';
+});
+
+</script>
+
+</body>
+</html>
